@@ -7,7 +7,7 @@
     body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; padding: 20px; }
     h1 { text-align: center; }
     .user { margin-bottom: 20px; }
-    .conflict { color: red; font-weight: bold; }
+    .conflict, .weekend-off { color: red; font-weight: bold; }
     .entry { padding: 5px 0; }
     label, input { font-size: 1rem; }
   </style>
@@ -24,7 +24,7 @@
         <p>No conflicts found.</p>
       <% } else { %>
         <% conflicts[name].forEach(item => { %>
-          <div class="entry <%= item.conflict ? 'conflict' : '' %>">
+          <div class="entry <%= item.conflict || item.type.includes('Day Off for Weekend') ? 'conflict' : '' %>">
             <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
           </div>
         <% }) %>
