@@ -1,67 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Desk Conflict Checker</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
     }
-    h2 {
-      margin-top: 40px;
+    h1 {
+      text-align: center;
     }
-    .user-section {
-      margin-bottom: 40px;
+    .user {
+      margin: 20px 0;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
-    .conflict {
+    .conflict, .available {
+      margin-left: 20px;
+    }
+    .conflict span {
       color: red;
     }
-    .availability {
+    .available span {
       color: green;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      margin-bottom: 4px;
     }
   </style>
 </head>
 <body>
   <h1>Desk Conflict Checker</h1>
 
-  <% Object.keys(conflicts).forEach(name => { %>
-    <div class="user-section">
+  <% for (let name in conflicts) { %>
+    <div class="user">
       <h2><%= name %></h2>
 
-      <h3>Conflicts:</h3>
-      <ul>
+      <div class="conflict">
+        <strong>Conflicts:</strong><br>
         <% if (conflicts[name].length === 0) { %>
-          <li>✅ No conflicts</li>
+          None
         <% } else { %>
-          <% conflicts[name].forEach(c => { %>
-            <li class="<%= c.conflict ? 'conflict' : '' %>">
-              <%= c.from.format("ddd MM/DD h:mm A") %> - <%= c.to.format("h:mm A") %>: <%= c.type %>
-              <% if (c.conflict) { %> ❌ Conflict <% } %>
-            </li>
+          <% conflicts[name].forEach(event => { %>
+            <div>
+              <span><%= event.from.format("ddd MM/DD h:mm A") %> - <%= event.to.format("h:mm A") %>: <%= event.type %></span>
+            </div>
           <% }) %>
         <% } %>
-      </ul>
+      </div>
 
-      <h3>Available Desk Shifts:</h3>
-      <ul>
+      <div class="available">
+        <strong>Available Desk Shifts:</strong><br>
         <% if (availability[name].length === 0) { %>
-          <li>❌ No desk shift availability</li>
+          None
         <% } else { %>
           <% availability[name].forEach(slot => { %>
-            <li class="availability"><%= slot.date %> — <%= slot.from %> to <%= slot.to %></li>
+            <div>
+              <span><%= slot.date %> — <%= slot.from %> to <%= slot.to %></span>
+            </div>
           <% }) %>
         <% } %>
-      </ul>
+      </div>
     </div>
-  <% }) %>
+  <% } %>
 </body>
 </html>
