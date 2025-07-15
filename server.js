@@ -51,15 +51,20 @@ function isOverlapping(aStart, aEnd, bStart, bEnd) {
 }
 
 async function getLibstafferToken() {
-  const { data } = await axios.post(`${LIBSTAFFER_BASE}/oauth/token`, null, {
-    params: {
-      client_id: process.env.LIBSTAFFER_CLIENT_ID,
-      client_secret: process.env.LIBSTAFFER_CLIENT_SECRET,
-      grant_type: "client_credentials"
+  const params = new URLSearchParams();
+  params.append("client_id", process.env.LIBSTAFFER_CLIENT_ID);
+  params.append("client_secret", process.env.LIBSTAFFER_CLIENT_SECRET);
+  params.append("grant_type", "client_credentials");
+
+  const { data } = await axios.post(`${LIBSTAFFER_BASE}/oauth/token`, params, {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
     }
   });
+
   return data.access_token;
 }
+
 
 async function getLibcalToken() {
   const { data } = await axios.post(`${LIBCAL_BASE}/oauth/token`, new URLSearchParams({
