@@ -121,13 +121,18 @@ app.get("/", async (req, res) => {
     }
   }));
 
-  const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
-  console.log("📅 Parsed calendar IDs:", calendarIds);
+const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
+console.log("📅 Parsed calendar IDs:", calendarIds);
+
+// Send each calendarId as a separate request
+for (const calId of calendarIds) {
   const params = new URLSearchParams();
-  calendarIds.forEach(id => params.append('cal_id[]', id));
+  params.append('cal_id', calId); // ✅ FIXED: use 'cal_id', not 'cal_id[]'
   params.append('date', from);
   params.append('days', '14');
   params.append('limit', '500');
+
+  console.log("📤 Fetching LibCal events with:", params.toString());
 
   const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
     headers: { Authorization: `Bearer ${libcalToken}` }
@@ -143,6 +148,8 @@ app.get("/", async (req, res) => {
       }
     }
   }
+}
+
 
   const appointments = await axios.get(`${LIBCAL_BASE}/appointments/bookings`, {
     headers: { Authorization: `Bearer ${libcalToken}` },
