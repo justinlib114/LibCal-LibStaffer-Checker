@@ -54,32 +54,6 @@ function isOverlapping(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
-function generateDeskSlots(date) {
-  const slots = [];
-  const dow = date.day();
-  const base = date.startOf("day");
-  const pushSlot = (startHour, startMin, endHour, endMin) => {
-    slots.push({
-      from: base.hour(startHour).minute(startMin),
-      to: base.hour(endHour).minute(endMin)
-    });
-  };
-  if ([1, 4, 5].includes(dow)) {
-    pushSlot(9, 0, 11, 0);
-    pushSlot(11, 0, 13, 0);
-    pushSlot(13, 0, 15, 0);
-    pushSlot(15, 0, 17, 0);
-  } else if ([2, 3].includes(dow)) {
-    pushSlot(9, 0, 11, 0);
-    pushSlot(11, 0, 13, 0);
-    pushSlot(13, 0, 15, 0);
-    pushSlot(15, 0, 17, 0);
-    pushSlot(17, 0, 19, 0);
-    pushSlot(19, 0, 20, 30);
-  }
-  return slots;
-}
-
 async function getLibstafferToken() {
   const params = new URLSearchParams();
   params.append("client_id", process.env.LIBSTAFFER_CLIENT_ID);
@@ -87,8 +61,11 @@ async function getLibstafferToken() {
   params.append("grant_type", "client_credentials");
 
   const { data } = await axios.post(`${LIBSTAFFER_BASE}/oauth/token`, params, {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
   });
+
   return data.access_token;
 }
 
@@ -98,7 +75,9 @@ async function getLibcalToken() {
     client_secret: process.env.LIBCAL_CLIENT_SECRET,
     grant_type: "client_credentials"
   }), {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
   });
   return data.access_token;
 }
@@ -107,12 +86,15 @@ app.get("/", async (req, res) => {
   const start = dayjs().tz("America/New_York").startOf("day");
   const from = start.format("YYYY-MM-DD");
 
+  console.log("⏳ Fetching tokens...");
   const [libstafferToken, libcalToken] = await Promise.all([
     getLibstafferToken(),
     getLibcalToken()
   ]);
+  console.log("✅ Tokens received");
 
-  const conflicts = {};
+  let conflicts = {};
+
   await Promise.all(libstafferUsers.map(async (userId) => {
     const name = userIdToName[userId] || `User ${userId}`;
     conflicts[name] = [];
@@ -145,12 +127,16 @@ app.get("/", async (req, res) => {
   }));
 
   const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
+  console.log("📅 Parsed calendar IDs:", calendarIds);
+
   for (const calId of calendarIds) {
     const params = new URLSearchParams();
     params.append('cal_id', calId);
     params.append('date', from);
     params.append('days', '14');
     params.append('limit', '500');
+
+    console.log("📤 Fetching LibCal events with:", params.toString());
 
     const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
       headers: { Authorization: `Bearer ${libcalToken}` }
@@ -161,6 +147,8 @@ app.get("/", async (req, res) => {
       : Array.isArray(libcalEvents.data.events)
         ? libcalEvents.data.events
         : [];
+
+    console.log(`📦 Extracted ${events.length} events for calendar ${calId}`);
 
     for (let event of events) {
       const ownerName = event?.owner?.name;
@@ -184,36 +172,62 @@ app.get("/", async (req, res) => {
     }
   });
 
+  console.log("📋 Appointments received:", appointments.data);
+
   for (let a of appointments.data) {
     const name = userIdToName[a.userId];
     const s = dayjs(a.fromDate).tz("America/New_York");
     const e = dayjs(a.toDate).tz("America/New_York");
+    console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
+
     if (!name) continue;
     if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
       conflicts[name].push({ type: "Appointment", from: s, to: e });
+      console.log(`✅ Added appointment to ${name}`);
     }
   }
 
-  const availability = {};
   for (let name in conflicts) {
-    availability[name] = [];
-    for (let i = 0; i < 14; i++) {
-      const currentDay = start.add(i, 'day');
-      const slots = generateDeskSlots(currentDay);
-      for (let slot of slots) {
-        const overlaps = conflicts[name].some(ev => isOverlapping(slot.from, slot.to, ev.from, ev.to));
-        if (!overlaps) {
-          availability[name].push({
-            date: currentDay.format("YYYY-MM-DD"),
-            from: slot.from.format("h:mm A"),
-            to: slot.to.format("h:mm A")
-          });
+    conflicts[name].sort((a, b) => a.from - b.from);
+    for (let i = 0; i < conflicts[name].length; i++) {
+      for (let j = i + 1; j < conflicts[name].length; j++) {
+        if (isOverlapping(conflicts[name][i].from, conflicts[name][i].to, conflicts[name][j].from, conflicts[name][j].to)) {
+          conflicts[name][i].conflict = true;
+          conflicts[name][j].conflict = true;
         }
       }
     }
   }
 
-  res.render("index", { conflicts, availability });
+  res.render("index", { conflicts });
+});
+
+app.get("/libcal-test", async (req, res) => {
+  try {
+    const libcalToken = await getLibcalToken();
+
+    const calendarId = "7925";
+    const from = dayjs().tz("America/New_York").startOf("day").format("YYYY-MM-DD");
+
+    const params = new URLSearchParams();
+    params.append("cal_id", calendarId);
+    params.append("date", from);
+    params.append("days", "1");
+    params.append("limit", "10");
+
+    console.log("📤 Fetching LibCal events with params:", params.toString());
+
+    const response = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${libcalToken}` }
+    });
+
+    console.log("✅ LibCal events received:", response.data);
+    res.send("✅ LibCal API request succeeded. Check logs.");
+
+  } catch (error) {
+    console.error("❌ Error fetching LibCal events:", error.response?.data || error.message);
+    res.status(500).send("❌ Failed to fetch LibCal events.");
+  }
 });
 
 const PORT = process.env.PORT || 3000;
