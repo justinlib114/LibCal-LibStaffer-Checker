@@ -107,7 +107,7 @@ app.get("/", async (req, res) => {
       for (let shift of shifts) {
         const s = dayjs(shift.from);
         const e = dayjs(shift.to);
-        const shiftName = shift.schedule_title || shift.name || "Shift";
+        const shiftName = shift.shiftName || shift.scheduleName || "Shift";
         if (s.hour() >= 9 && e.hour() <= 21) {
           conflicts[name].push({ type: `Shift (${shiftName})`, from: s, to: e });
         }
