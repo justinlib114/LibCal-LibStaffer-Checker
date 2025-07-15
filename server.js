@@ -2,7 +2,12 @@ require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
 const path = require("path");
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const app = express();
 app.set("view engine", "ejs");
@@ -78,7 +83,7 @@ async function getLibcalToken() {
 }
 
 app.get("/", async (req, res) => {
-  const start = dayjs().startOf("day");
+  const start = dayjs().tz("America/New_York").startOf("day");
   const from = start.format("YYYY-MM-DD");
 
   console.log("⏳ Fetching tokens...");
@@ -169,19 +174,18 @@ app.get("/", async (req, res) => {
 
   console.log("📋 Appointments received:", appointments.data);
 
-for (let a of appointments.data) {
-  const name = userIdToName[a.userId];
-  const s = dayjs(a.fromDate);
-  const e = dayjs(a.toDate);
-  console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
+  for (let a of appointments.data) {
+    const name = userIdToName[a.userId];
+    const s = dayjs(a.fromDate).tz("America/New_York");
+    const e = dayjs(a.toDate).tz("America/New_York");
+    console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
 
-  if (!name) continue;
-  if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
-    conflicts[name].push({ type: "Appointment", from: s, to: e });
-    console.log(`✅ Added appointment to ${name}`);
+    if (!name) continue;
+    if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
+      conflicts[name].push({ type: "Appointment", from: s, to: e });
+      console.log(`✅ Added appointment to ${name}`);
+    }
   }
-}
-
 
   for (let name in conflicts) {
     conflicts[name].sort((a, b) => a.from - b.from);
@@ -203,7 +207,7 @@ app.get("/libcal-test", async (req, res) => {
     const libcalToken = await getLibcalToken();
 
     const calendarId = "7925";
-    const from = dayjs().startOf("day").format("YYYY-MM-DD");
+    const from = dayjs().tz("America/New_York").startOf("day").format("YYYY-MM-DD");
 
     const params = new URLSearchParams();
     params.append("cal_id", calendarId);
