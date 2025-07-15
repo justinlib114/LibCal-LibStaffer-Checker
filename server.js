@@ -103,16 +103,16 @@ app.get("/", async (req, res) => {
         params: { date: from, days: 14, scheduleId: sid }
       });
 
-const shifts = data?.data?.shifts || [];
-for (let shift of shifts) {
-  const s = dayjs(shift.from);
-  const e = dayjs(shift.to);
-  const shiftName = shift.shiftName || shift.scheduleName || "Shift";
-  if (s.hour() >= 9 && e.hour() <= 21) {
-    conflicts[name].push({ type: `Shift (${shiftName})`, from: s, to: e });
-  }
-}
-
+      const shifts = data?.data?.shifts || [];
+      for (let shift of shifts) {
+        const s = dayjs(shift.from);
+        const e = dayjs(shift.to);
+        const shiftName = shift.schedule_title || shift.name || "Shift";
+        if (s.hour() >= 9 && e.hour() <= 21) {
+          conflicts[name].push({ type: `Shift (${shiftName})`, from: s, to: e });
+        }
+      }
+    }
 
     const timeoffRes = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
       headers: { Authorization: `Bearer ${libstafferToken}` },
