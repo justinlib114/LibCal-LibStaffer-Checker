@@ -1,9 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
 const dayjs = require("dayjs");
 const path = require("path");
-const dotenv = require("dotenv");
-dotenv.config();
 
 const app = express();
 app.set("view engine", "ejs");
@@ -65,13 +64,16 @@ async function getLibstafferToken() {
   return data.access_token;
 }
 
-
 async function getLibcalToken() {
   const { data } = await axios.post(`${LIBCAL_BASE}/oauth/token`, new URLSearchParams({
     client_id: process.env.LIBCAL_CLIENT_ID,
     client_secret: process.env.LIBCAL_CLIENT_SECRET,
     grant_type: "client_credentials"
-  }));
+  }), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    }
+  });
   return data.access_token;
 }
 
@@ -92,7 +94,6 @@ app.get("/", async (req, res) => {
     const name = userIdToName[userId] || `User ${userId}`;
     conflicts[name] = [];
 
-    // Shifts
     for (let sid of scheduleIds) {
       const { data } = await axios.get(`${LIBSTAFFER_BASE}/users/shifts/${userId}`, {
         headers: { Authorization: `Bearer ${libstafferToken}` },
@@ -107,7 +108,6 @@ app.get("/", async (req, res) => {
       }
     }
 
-    // Time off
     const timeoffRes = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
       headers: { Authorization: `Bearer ${libstafferToken}` },
       params: { date: from, days: 14 }
@@ -121,18 +121,17 @@ app.get("/", async (req, res) => {
     }
   }));
 
-  // LibCal Events
-const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
-const params = new URLSearchParams();
-calendarIds.forEach(id => params.append('cal_id[]', id));
-params.append('date', from);
-params.append('days', '14');
-params.append('limit', '500');
+  const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
+  console.log("📅 Parsed calendar IDs:", calendarIds);
+  const params = new URLSearchParams();
+  calendarIds.forEach(id => params.append('cal_id[]', id));
+  params.append('date', from);
+  params.append('days', '14');
+  params.append('limit', '500');
 
-const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
-  headers: { Authorization: `Bearer ${libcalToken}` }
-});
-
+  const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${libcalToken}` }
+  });
 
   for (let event of libcalEvents.data) {
     const ownerName = event?.owner?.name;
@@ -145,7 +144,6 @@ const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}
     }
   }
 
-  // Appointments
   const appointments = await axios.get(`${LIBCAL_BASE}/appointments/bookings`, {
     headers: { Authorization: `Bearer ${libcalToken}` },
     params: {
@@ -165,7 +163,6 @@ const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}
     }
   }
 
-  // Detect overlaps
   for (let name in conflicts) {
     conflicts[name].sort((a, b) => a.from - b.from);
     for (let i = 0; i < conflicts[name].length; i++) {
