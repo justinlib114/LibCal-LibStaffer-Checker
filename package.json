@@ -9,6 +9,8 @@
   "dependencies": {
     "axios": "^1.10.0",
     "dayjs": "^1.11.13",
+    "dayjs-plugin-utc": "^1.0.0",
+    "dayjs-plugin-timezone": "^1.0.0",
     "dotenv": "^17.2.0",
     "ejs": "^3.1.10",
     "express": "^4.21.2"
