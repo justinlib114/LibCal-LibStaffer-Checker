@@ -178,5 +178,34 @@ app.get("/", async (req, res) => {
   res.render("index", { conflicts });
 });
 
+app.get("/libcal-test", async (req, res) => {
+  try {
+    const libcalToken = await getLibcalToken();
+
+    const calendarId = "7925"; // Use just one to isolate problem
+    const from = dayjs().startOf("day").format("YYYY-MM-DD");
+
+    const params = new URLSearchParams();
+    params.append("cal_id[]", calendarId);
+    params.append("date", from);
+    params.append("days", "1");
+    params.append("limit", "10");
+
+    console.log("📤 Fetching LibCal events with params:", params.toString());
+
+    const response = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${libcalToken}` }
+    });
+
+    console.log("✅ LibCal events received:", response.data);
+    res.send("✅ LibCal API request succeeded. Check logs.");
+
+  } catch (error) {
+    console.error("❌ Error fetching LibCal events:", error.response?.data || error.message);
+    res.status(500).send("❌ Failed to fetch LibCal events.");
+  }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
