@@ -124,8 +124,8 @@ app.get("/", async (req, res) => {
   // LibCal Events
   const libcalEvents = await axios.get(`${LIBCAL_BASE}/events`, {
     headers: { Authorization: `Bearer ${libcalToken}` },
-    params: {
-      cal_id: process.env.LIBCAL_CAL_IDS,
+params: {
+  cal_id: process.env.LIBCAL_CAL_IDS.split(','),
       date: from,
       days: 14,
       limit: 500
