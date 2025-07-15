@@ -121,35 +121,41 @@ app.get("/", async (req, res) => {
     }
   }));
 
-const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
-console.log("📅 Parsed calendar IDs:", calendarIds);
+  const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
+  console.log("📅 Parsed calendar IDs:", calendarIds);
 
-// Send each calendarId as a separate request
-for (const calId of calendarIds) {
-  const params = new URLSearchParams();
-  params.append('cal_id', calId); // ✅ FIXED: use 'cal_id', not 'cal_id[]'
-  params.append('date', from);
-  params.append('days', '14');
-  params.append('limit', '500');
+  for (const calId of calendarIds) {
+    const params = new URLSearchParams();
+    params.append('cal_id', calId);
+    params.append('date', from);
+    params.append('days', '14');
+    params.append('limit', '500');
 
-  console.log("📤 Fetching LibCal events with:", params.toString());
+    console.log("📤 Fetching LibCal events with:", params.toString());
 
-  const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${libcalToken}` }
-  });
+    const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${libcalToken}` }
+    });
 
-  for (let event of libcalEvents.data) {
-    const ownerName = event?.owner?.name;
-    if (conflicts[ownerName]) {
-      const s = dayjs(event.start);
-      const e = dayjs(event.end);
-      if (s.hour() >= 9 && e.hour() <= 21) {
-        conflicts[ownerName].push({ type: `Event (${event.title})`, from: s, to: e });
+    const events = Array.isArray(libcalEvents.data)
+      ? libcalEvents.data
+      : Array.isArray(libcalEvents.data.events)
+        ? libcalEvents.data.events
+        : [];
+
+    console.log(`📦 Extracted ${events.length} events for calendar ${calId}`);
+
+    for (let event of events) {
+      const ownerName = event?.owner?.name;
+      if (conflicts[ownerName]) {
+        const s = dayjs(event.start);
+        const e = dayjs(event.end);
+        if (s.hour() >= 9 && e.hour() <= 21) {
+          conflicts[ownerName].push({ type: `Event (${event.title})`, from: s, to: e });
+        }
       }
     }
   }
-}
-
 
   const appointments = await axios.get(`${LIBCAL_BASE}/appointments/bookings`, {
     headers: { Authorization: `Bearer ${libcalToken}` },
@@ -189,11 +195,11 @@ app.get("/libcal-test", async (req, res) => {
   try {
     const libcalToken = await getLibcalToken();
 
-    const calendarId = "7925"; // Use just one to isolate problem
+    const calendarId = "7925";
     const from = dayjs().startOf("day").format("YYYY-MM-DD");
 
     const params = new URLSearchParams();
-    params.append("cal_id[]", calendarId);
+    params.append("cal_id", calendarId);
     params.append("date", from);
     params.append("days", "1");
     params.append("limit", "10");
@@ -212,7 +218,6 @@ app.get("/libcal-test", async (req, res) => {
     res.status(500).send("❌ Failed to fetch LibCal events.");
   }
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
