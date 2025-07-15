@@ -54,30 +54,51 @@ function isOverlapping(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
+function generateDeskSlots(date) {
+  const slots = [];
+  const dow = date.day();
+  const base = date.startOf("day");
+  const pushSlot = (startHour, startMin, endHour, endMin) => {
+    slots.push({
+      from: base.hour(startHour).minute(startMin),
+      to: base.hour(endHour).minute(endMin)
+    });
+  };
+  if ([1, 4, 5].includes(dow)) {
+    pushSlot(9, 0, 11, 0);
+    pushSlot(11, 0, 13, 0);
+    pushSlot(13, 0, 15, 0);
+    pushSlot(15, 0, 17, 0);
+  } else if ([2, 3].includes(dow)) {
+    pushSlot(9, 0, 11, 0);
+    pushSlot(11, 0, 13, 0);
+    pushSlot(13, 0, 15, 0);
+    pushSlot(15, 0, 17, 0);
+    pushSlot(17, 0, 19, 0);
+    pushSlot(19, 0, 20, 30);
+  }
+  return slots;
+}
+
 async function getLibstafferToken() {
   const params = new URLSearchParams();
   params.append("client_id", process.env.LIBSTAFFER_CLIENT_ID);
   params.append("client_secret", process.env.LIBSTAFFER_CLIENT_SECRET);
   params.append("grant_type", "client_credentials");
 
-  const { data } = await axios.post(${LIBSTAFFER_BASE}/oauth/token, params, {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    }
+  const { data } = await axios.post(`${LIBSTAFFER_BASE}/oauth/token`, params, {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" }
   });
-
   return data.access_token;
 }
 
 async function getLibcalToken() {
-  const { data } = await axios.post(${LIBCAL_BASE}/oauth/token, new URLSearchParams({
+  const { data } = await axios.post(`${LIBCAL_BASE}/oauth/token`, new URLSearchParams({
     client_id: process.env.LIBCAL_CLIENT_ID,
     client_secret: process.env.LIBCAL_CLIENT_SECRET,
     grant_type: "client_credentials"
   }), {
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    }
+    headers: { "Content-Type": "application/x-www-form-urlencoded" }
   });
   return data.access_token;
 }
@@ -86,22 +107,19 @@ app.get("/", async (req, res) => {
   const start = dayjs().tz("America/New_York").startOf("day");
   const from = start.format("YYYY-MM-DD");
 
-  console.log("⏳ Fetching tokens...");
   const [libstafferToken, libcalToken] = await Promise.all([
     getLibstafferToken(),
     getLibcalToken()
   ]);
-  console.log("✅ Tokens received");
 
-  let conflicts = {};
-
+  const conflicts = {};
   await Promise.all(libstafferUsers.map(async (userId) => {
-    const name = userIdToName[userId] || User ${userId};
+    const name = userIdToName[userId] || `User ${userId}`;
     conflicts[name] = [];
 
     for (let sid of scheduleIds) {
-      const { data } = await axios.get(${LIBSTAFFER_BASE}/users/shifts/${userId}, {
-        headers: { Authorization: Bearer ${libstafferToken} },
+      const { data } = await axios.get(`${LIBSTAFFER_BASE}/users/shifts/${userId}`, {
+        headers: { Authorization: `Bearer ${libstafferToken}` },
         params: { date: from, days: 14, scheduleId: sid }
       });
       for (let shift of data?.data?.shifts || []) {
@@ -113,22 +131,20 @@ app.get("/", async (req, res) => {
       }
     }
 
-    const timeoffRes = await axios.get(${LIBSTAFFER_BASE}/users/timeoff/${userId}, {
-      headers: { Authorization: Bearer ${libstafferToken} },
+    const timeoffRes = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
+      headers: { Authorization: `Bearer ${libstafferToken}` },
       params: { date: from, days: 14 }
     });
     for (let t of timeoffRes?.data?.data?.timeOff || []) {
       const s = dayjs(t.from);
       const e = dayjs(t.to);
       if (s.hour() >= 9 && e.hour() <= 21) {
-        conflicts[name].push({ type: Time Off (${t.category}), from: s, to: e });
+        conflicts[name].push({ type: `Time Off (${t.category})`, from: s, to: e });
       }
     }
   }));
 
   const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
-  console.log("📅 Parsed calendar IDs:", calendarIds);
-
   for (const calId of calendarIds) {
     const params = new URLSearchParams();
     params.append('cal_id', calId);
@@ -136,10 +152,8 @@ app.get("/", async (req, res) => {
     params.append('days', '14');
     params.append('limit', '500');
 
-    console.log("📤 Fetching LibCal events with:", params.toString());
-
-    const libcalEvents = await axios.get(${LIBCAL_BASE}/events?${params.toString()}, {
-      headers: { Authorization: Bearer ${libcalToken} }
+    const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${libcalToken}` }
     });
 
     const events = Array.isArray(libcalEvents.data)
@@ -148,22 +162,20 @@ app.get("/", async (req, res) => {
         ? libcalEvents.data.events
         : [];
 
-    console.log(📦 Extracted ${events.length} events for calendar ${calId});
-
     for (let event of events) {
       const ownerName = event?.owner?.name;
       if (conflicts[ownerName]) {
         const s = dayjs(event.start);
         const e = dayjs(event.end);
         if (s.hour() >= 9 && e.hour() <= 21) {
-          conflicts[ownerName].push({ type: Event (${event.title}), from: s, to: e });
+          conflicts[ownerName].push({ type: `Event (${event.title})`, from: s, to: e });
         }
       }
     }
   }
 
-  const appointments = await axios.get(${LIBCAL_BASE}/appointments/bookings, {
-    headers: { Authorization: Bearer ${libcalToken} },
+  const appointments = await axios.get(`${LIBCAL_BASE}/appointments/bookings`, {
+    headers: { Authorization: `Bearer ${libcalToken}` },
     params: {
       user_id: libcalAppointmentUserId,
       date: from,
@@ -172,18 +184,13 @@ app.get("/", async (req, res) => {
     }
   });
 
-  console.log("📋 Appointments received:", appointments.data);
-
   for (let a of appointments.data) {
     const name = userIdToName[a.userId];
     const s = dayjs(a.fromDate).tz("America/New_York");
     const e = dayjs(a.toDate).tz("America/New_York");
-    console.log(🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()});
-
     if (!name) continue;
     if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
       conflicts[name].push({ type: "Appointment", from: s, to: e });
-      console.log(✅ Added appointment to ${name});
     }
   }
 
@@ -199,36 +206,22 @@ app.get("/", async (req, res) => {
     }
   }
 
-  res.render("index", { conflicts });
-});
-
-app.get("/libcal-test", async (req, res) => {
-  try {
-    const libcalToken = await getLibcalToken();
-
-    const calendarId = "7925";
-    const from = dayjs().tz("America/New_York").startOf("day").format("YYYY-MM-DD");
-
-    const params = new URLSearchParams();
-    params.append("cal_id", calendarId);
-    params.append("date", from);
-    params.append("days", "1");
-    params.append("limit", "10");
-
-    console.log("📤 Fetching LibCal events with params:", params.toString());
-
-    const response = await axios.get(${LIBCAL_BASE}/events?${params.toString()}, {
-      headers: { Authorization: Bearer ${libcalToken} }
-    });
-
-    console.log("✅ LibCal events received:", response.data);
-    res.send("✅ LibCal API request succeeded. Check logs.");
-
-  } catch (error) {
-    console.error("❌ Error fetching LibCal events:", error.response?.data || error.message);
-    res.status(500).send("❌ Failed to fetch LibCal events.");
+  const availability = {};
+  for (let name in conflicts) {
+    availability[name] = [];
+    for (let d = start; d.isBefore(start.add(14, 'day')); d = d.add(1, 'day')) {
+      const slots = generateDeskSlots(d);
+      for (let slot of slots) {
+        const overlaps = conflicts[name].some(ev => isOverlapping(slot.from, slot.to, ev.from, ev.to));
+        if (!overlaps) {
+          availability[name].push({ date: d.format("YYYY-MM-DD"), from: slot.from.format("h:mm A"), to: slot.to.format("h:mm A") });
+        }
+      }
+    }
   }
+
+  res.render("index", { conflicts, availability });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(✅ Desk Conflict Checker running on port ${PORT}));
+app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
