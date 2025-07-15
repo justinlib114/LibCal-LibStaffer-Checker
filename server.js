@@ -86,12 +86,10 @@ app.get("/", async (req, res) => {
   const start = dayjs().tz("America/New_York").startOf("day");
   const from = start.format("YYYY-MM-DD");
 
-  console.log("⏳ Fetching tokens...");
   const [libstafferToken, libcalToken] = await Promise.all([
     getLibstafferToken(),
     getLibcalToken()
   ]);
-  console.log("✅ Tokens received");
 
   let conflicts = {};
 
@@ -104,15 +102,17 @@ app.get("/", async (req, res) => {
         headers: { Authorization: `Bearer ${libstafferToken}` },
         params: { date: from, days: 14, scheduleId: sid }
       });
-for (let shift of data?.data?.shifts || []) {
-  const s = dayjs(shift.from);
-  const e = dayjs(shift.to);
-  const shiftName = shift.schedule_title || shift.name || "Shift";
-  if (s.hour() >= 9 && e.hour() <= 21) {
-    conflicts[name].push({ type: `Shift (${shiftName})`, from: s, to: e });
-  }
-}
 
+      const shifts = data?.data?.shifts || [];
+      for (let shift of shifts) {
+        const s = dayjs(shift.from);
+        const e = dayjs(shift.to);
+        const shiftName = shift.schedule_title || shift.name || "Shift";
+        if (s.hour() >= 9 && e.hour() <= 21) {
+          conflicts[name].push({ type: `Shift (${shiftName})`, from: s, to: e });
+        }
+      }
+    }
 
     const timeoffRes = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
       headers: { Authorization: `Bearer ${libstafferToken}` },
@@ -128,16 +128,13 @@ for (let shift of data?.data?.shifts || []) {
   }));
 
   const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
-  console.log("📅 Parsed calendar IDs:", calendarIds);
 
   for (const calId of calendarIds) {
     const params = new URLSearchParams();
-    params.append('cal_id', calId);
-    params.append('date', from);
-    params.append('days', '14');
-    params.append('limit', '500');
-
-    console.log("📤 Fetching LibCal events with:", params.toString());
+    params.append("cal_id", calId);
+    params.append("date", from);
+    params.append("days", "14");
+    params.append("limit", "500");
 
     const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
       headers: { Authorization: `Bearer ${libcalToken}` }
@@ -148,8 +145,6 @@ for (let shift of data?.data?.shifts || []) {
       : Array.isArray(libcalEvents.data.events)
         ? libcalEvents.data.events
         : [];
-
-    console.log(`📦 Extracted ${events.length} events for calendar ${calId}`);
 
     for (let event of events) {
       const ownerName = event?.owner?.name;
@@ -173,18 +168,13 @@ for (let shift of data?.data?.shifts || []) {
     }
   });
 
-  console.log("📋 Appointments received:", appointments.data);
-
   for (let a of appointments.data) {
     const name = userIdToName[a.userId];
     const s = dayjs(a.fromDate).tz("America/New_York");
     const e = dayjs(a.toDate).tz("America/New_York");
-    console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
-
     if (!name) continue;
     if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
       conflicts[name].push({ type: "Appointment", from: s, to: e });
-      console.log(`✅ Added appointment to ${name}`);
     }
   }
 
@@ -201,34 +191,6 @@ for (let shift of data?.data?.shifts || []) {
   }
 
   res.render("index", { conflicts });
-});
-
-app.get("/libcal-test", async (req, res) => {
-  try {
-    const libcalToken = await getLibcalToken();
-
-    const calendarId = "7925";
-    const from = dayjs().tz("America/New_York").startOf("day").format("YYYY-MM-DD");
-
-    const params = new URLSearchParams();
-    params.append("cal_id", calendarId);
-    params.append("date", from);
-    params.append("days", "1");
-    params.append("limit", "10");
-
-    console.log("📤 Fetching LibCal events with params:", params.toString());
-
-    const response = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${libcalToken}` }
-    });
-
-    console.log("✅ LibCal events received:", response.data);
-    res.send("✅ LibCal API request succeeded. Check logs.");
-
-  } catch (error) {
-    console.error("❌ Error fetching LibCal events:", error.response?.data || error.message);
-    res.status(500).send("❌ Failed to fetch LibCal events.");
-  }
 });
 
 const PORT = process.env.PORT || 3000;
