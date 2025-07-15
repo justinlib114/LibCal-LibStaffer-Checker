@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Desk Conflict Checker</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; padding: 20px; }
+    h1 { text-align: center; }
+    .user { margin-bottom: 20px; }
+    .conflict { color: red; font-weight: bold; }
+    .entry { padding: 5px 0; }
+    label, input { font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Desk Conflict Checker</h1>
+  <label for="search">Filter by Name:</label>
+  <input type="text" id="search" onkeyup="filterList()" placeholder="Type a name...">
+
+  <% Object.keys(conflicts).forEach(name => { %>
+    <div class="user">
+      <h2><%= name %></h2>
+      <% if (conflicts[name].length === 0) { %>
+        <p>No conflicts found.</p>
+      <% } else { %>
+        <% conflicts[name].forEach(item => { %>
+          <div class="entry <%= item.conflict ? 'conflict' : '' %>">
+            <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
+          </div>
+        <% }) %>
+      <% } %>
+    </div>
+  <% }) %>
+
+  <script>
+    function filterList() {
+      const input = document.getElementById("search").value.toLowerCase();
+      const users = document.querySelectorAll(".user");
+      users.forEach(user => {
+        const name = user.querySelector("h2").innerText.toLowerCase();
+        user.style.display = name.includes(input) ? "" : "none";
+      });
+    }
+  </script>
+</body>
+</html>
