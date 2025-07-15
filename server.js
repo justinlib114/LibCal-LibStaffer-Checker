@@ -42,7 +42,7 @@ const userIdToName = {
   52545: "Justin Sanchez",
   94845: "Alex Shoshani",
   90883: "Claire Tomkin",
-  86771: "LibCal Appointment Owner"
+  86771: "Justin Sanchez"
 };
 
 function isOverlapping(aStart, aEnd, bStart, bEnd) {
@@ -167,16 +167,20 @@ app.get("/", async (req, res) => {
     }
   });
 
- for (let a of appointments.data) {
-  const name = a?.with?.name;
-  if (!name) continue;
-  const s = dayjs(a.from);
-  const e = dayjs(a.to);
-  if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
-    conflicts[name].push({ type: "Appointment", from: s, to: e });
-  }
-}
+  console.log("📋 Appointments received:", appointments.data);
 
+  for (let a of appointments.data) {
+    const name = a?.with?.name;
+    const s = dayjs(a.from);
+    const e = dayjs(a.to);
+    console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
+
+    if (!name) continue;
+    if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
+      conflicts[name].push({ type: "Appointment", from: s, to: e });
+      console.log(`✅ Added appointment to ${name}`);
+    }
+  }
 
   for (let name in conflicts) {
     conflicts[name].sort((a, b) => a.from - b.from);
