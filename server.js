@@ -122,15 +122,17 @@ app.get("/", async (req, res) => {
   }));
 
   // LibCal Events
-const libcalEvents = await axios.get(`${LIBCAL_BASE}/events`, {
-  headers: { Authorization: `Bearer ${libcalToken}` },
-  params: {
-    cal_id: process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim()),
-    date: from,
-    days: 14,
-    limit: 500
-  }
+const calendarIds = process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim());
+const params = new URLSearchParams();
+calendarIds.forEach(id => params.append('cal_id[]', id));
+params.append('date', from);
+params.append('days', '14');
+params.append('limit', '500');
+
+const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
+  headers: { Authorization: `Bearer ${libcalToken}` }
 });
+
 
   for (let event of libcalEvents.data) {
     const ownerName = event?.owner?.name;
