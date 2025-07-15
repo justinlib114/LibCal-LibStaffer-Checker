@@ -170,7 +170,7 @@ app.get("/", async (req, res) => {
   console.log("📋 Appointments received:", appointments.data);
 
   for (let a of appointments.data) {
-    const name = a?.with?.name;
+    const name = userIdToName[a.userId];
     const s = dayjs(a.from);
     const e = dayjs(a.to);
     console.log(`🔎 Checking appointment for ${name}: ${s.format()} - ${e.format()}`);
