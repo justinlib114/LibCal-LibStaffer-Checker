@@ -122,15 +122,15 @@ app.get("/", async (req, res) => {
   }));
 
   // LibCal Events
-  const libcalEvents = await axios.get(`${LIBCAL_BASE}/events`, {
-    headers: { Authorization: `Bearer ${libcalToken}` },
-params: {
-  cal_id: process.env.LIBCAL_CAL_IDS.split(','),
-      date: from,
-      days: 14,
-      limit: 500
-    }
-  });
+const libcalEvents = await axios.get(`${LIBCAL_BASE}/events`, {
+  headers: { Authorization: `Bearer ${libcalToken}` },
+  params: {
+    cal_id: process.env.LIBCAL_CAL_IDS.split(',').map(id => id.trim()),
+    date: from,
+    days: 14,
+    limit: 500
+  }
+});
 
   for (let event of libcalEvents.data) {
     const ownerName = event?.owner?.name;
