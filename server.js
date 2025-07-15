@@ -194,27 +194,20 @@ app.get("/", async (req, res) => {
     }
   }
 
-  for (let name in conflicts) {
-    conflicts[name].sort((a, b) => a.from - b.from);
-    for (let i = 0; i < conflicts[name].length; i++) {
-      for (let j = i + 1; j < conflicts[name].length; j++) {
-        if (isOverlapping(conflicts[name][i].from, conflicts[name][i].to, conflicts[name][j].from, conflicts[name][j].to)) {
-          conflicts[name][i].conflict = true;
-          conflicts[name][j].conflict = true;
-        }
-      }
-    }
-  }
-
   const availability = {};
   for (let name in conflicts) {
     availability[name] = [];
-    for (let d = start; d.isBefore(start.add(14, 'day')); d = d.add(1, 'day')) {
-      const slots = generateDeskSlots(d);
+    for (let i = 0; i < 14; i++) {
+      const currentDay = start.add(i, 'day');
+      const slots = generateDeskSlots(currentDay);
       for (let slot of slots) {
         const overlaps = conflicts[name].some(ev => isOverlapping(slot.from, slot.to, ev.from, ev.to));
         if (!overlaps) {
-          availability[name].push({ date: d.format("YYYY-MM-DD"), from: slot.from.format("h:mm A"), to: slot.to.format("h:mm A") });
+          availability[name].push({
+            date: currentDay.format("YYYY-MM-DD"),
+            from: slot.from.format("h:mm A"),
+            to: slot.to.format("h:mm A")
+          });
         }
       }
     }
