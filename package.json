@@ -1,0 +1,16 @@
+{
+  "name": "desk-conflict-checker",
+  "version": "1.0.0",
+  "description": "Library staff schedule conflict checker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "dayjs": "^1.11.13",
+    "dotenv": "^17.2.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2"
+  }
+}
