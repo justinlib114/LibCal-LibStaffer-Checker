@@ -167,14 +167,16 @@ app.get("/", async (req, res) => {
     }
   });
 
-  for (let a of appointments.data) {
-    const name = a.with.name;
-    const s = dayjs(a.from);
-    const e = dayjs(a.to);
-    if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
-      conflicts[name].push({ type: "Appointment", from: s, to: e });
-    }
+ for (let a of appointments.data) {
+  const name = a?.with?.name;
+  if (!name) continue;
+  const s = dayjs(a.from);
+  const e = dayjs(a.to);
+  if (conflicts[name] && s.hour() >= 9 && e.hour() <= 21) {
+    conflicts[name].push({ type: "Appointment", from: s, to: e });
   }
+}
+
 
   for (let name in conflicts) {
     conflicts[name].sort((a, b) => a.from - b.from);
