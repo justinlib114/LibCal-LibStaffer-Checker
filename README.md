@@ -89,5 +89,88 @@ PORT=3000</code></pre>
     <li>Staff display names and groups are mapped manually</li>
   </ul>
 
+ <h1>🚀 Deploy Desk Conflict Checker to Render</h1>
+
+  <div class="section">
+    <h2>📝 Prerequisites</h2>
+    <ul>
+      <li>A <a href="https://render.com" target="_blank">Render</a> account</li>
+      <li>Your code pushed to a GitHub repository</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🔧 Step 1: Push to GitHub</h2>
+    <pre><code>git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/your-username/your-repo.git
+git push -u origin main</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>🛠️ Step 2: Prepare for Render</h2>
+    <ul>
+      <li>Ensure your project has a <code>package.json</code> file with a start script:</li>
+    </ul>
+    <pre><code>{
+  "scripts": {
+    "start": "node server.js"
+  }
+}</code></pre>
+    <ul>
+      <li>Ensure you have a <code>server.js</code> file</li>
+      <li>Optionally include a <code>.env.example</code> file:</li>
+    </ul>
+    <pre><code>LIBSTAFFER_CLIENT_ID=
+LIBSTAFFER_CLIENT_SECRET=
+LIBCAL_CLIENT_ID=
+LIBCAL_CLIENT_SECRET=
+LIBCAL_CAL_IDS=
+PORT=3000</code></pre>
+  </div>
+
+  <div class="section">
+    <h2>🌐 Step 3: Create a Web Service</h2>
+    <ol>
+      <li>Log in at <a href="https://dashboard.render.com" target="_blank">https://dashboard.render.com</a></li>
+      <li>Click <strong>New +</strong> → <strong>Web Service</strong></li>
+      <li>Connect to your GitHub repository</li>
+      <li>Fill in the fields as follows:</li>
+    </ol>
+
+    <table>
+      <tr><th>Setting</th><th>Value</th></tr>
+      <tr><td>Name</td><td><code>desk-conflict-checker</code></td></tr>
+      <tr><td>Environment</td><td><code>Node</code></td></tr>
+      <tr><td>Build Command</td><td><code>npm install</code></td></tr>
+      <tr><td>Start Command</td><td><code>npm start</code></td></tr>
+      <tr><td>Region</td><td><code>US</code></td></tr>
+      <tr><td>Branch</td><td><code>main</code></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>🔐 Step 4: Add Environment Variables</h2>
+    <p>In the Render dashboard, go to the <strong>Environment</strong> tab and add:</p>
+    <table>
+      <tr><th>Key</th><th>Value</th></tr>
+      <tr><td>LIBSTAFFER_CLIENT_ID</td><td>Your LibStaffer API Client ID</td></tr>
+      <tr><td>LIBSTAFFER_CLIENT_SECRET</td><td>Your LibStaffer Secret</td></tr>
+      <tr><td>LIBCAL_CLIENT_ID</td><td>Your LibCal API Client ID</td></tr>
+      <tr><td>LIBCAL_CLIENT_SECRET</td><td>Your LibCal Secret</td></tr>
+      <tr><td>LIBCAL_CAL_IDS</td><td>Comma-separated calendar IDs</td></tr>
+      <tr><td>PORT</td><td><code>10000</code> (optional — Render will auto-assign)</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>⏳ Step 5: Deploy and Test</h2>
+    <ul>
+      <li>Click <strong>Manual Deploy</strong> or let Render deploy automatically</li>
+      <li>Visit your app at the URL provided by Render (e.g. <code>https://desk-conflict-checker.onrender.com</code>)</li>
+    </ul>
+  </div>
+
 </body>
 </html>
