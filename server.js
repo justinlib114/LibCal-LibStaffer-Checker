@@ -14,41 +14,14 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static("public"));
 
-const LIBSTAFFER_BASE = "https://greenburghlibrary.libstaffer.com/api/1.0";
-const LIBCAL_BASE = "https://greenburghlibrary.libcal.com/api/1.1";
+const LIBSTAFFER_BASE = process.env.LIBSTAFFER_BASE;
+const LIBCAL_BASE = process.env.LIBCAL_BASE;
 
-const libstafferUsers = [
-  77608, 84005, 62019, 88284, 49960, 45015, 44882, 44879, 45023,
-  45017, 95956, 68617, 44830, 45005, 58333, 94241, 44880, 44757,
-  52545, 94845, 90883
-];
-const scheduleIds = [8763, 8781, 10040];
-const libcalAppointmentUserId = 86771;
+const libstafferUsers = process.env.LIBSTAFFER_USERS.split(",").map(id => parseInt(id.trim()));
+const scheduleIds = process.env.SCHEDULE_IDS.split(",").map(id => parseInt(id.trim()));
+const libcalAppointmentUserId = parseInt(process.env.LIBCAL_APPOINTMENT_USER_ID);
 
-const userIdToName = {
-  77608: "Lisa Allen",
-  84005: "Michelle Blanyar",
-  62019: "Amelia Buccarelli",
-  88284: "Angela Carstensen",
-  49960: "Emily Dowie",
-  45015: "Gail Fell",
-  44882: "Antonio Forte",
-  44879: "Nicole Guenkel",
-  45023: "Janet Heneghan",
-  45017: "Susan Kramer",
-  95956: "Gary LaPicola",
-  68617: "Sarah Northshield",
-  44830: "Christa O'Sullivan",
-  45005: "Marina Payne",
-  58333: "Patricia Perito",
-  94241: "TonieAnne Rigano",
-  44880: "Joanna Rooney",
-  44757: "Christina Ryan-Linder",
-  52545: "Justin Sanchez",
-  94845: "Alex Shoshani",
-  90883: "Claire Tomkin",
-  86771: "Justin Sanchez"
-};
+const userIdToName = JSON.parse(process.env.USER_ID_TO_NAME);
 
 function isOverlapping(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
@@ -149,8 +122,8 @@ app.get("/", async (req, res) => {
     for (let event of events) {
       const ownerName = event?.owner?.name;
       if (conflicts[ownerName]) {
-      const s = dayjs.utc(event.start).tz("America/New_York");
-      const e = dayjs.utc(event.end).tz("America/New_York");
+        const s = dayjs.utc(event.start).tz("America/New_York");
+        const e = dayjs.utc(event.end).tz("America/New_York");
         if (s.hour() >= 9 && e.hour() <= 21) {
           conflicts[ownerName].push({ type: `Event (${event.title})`, from: s, to: e });
         }
