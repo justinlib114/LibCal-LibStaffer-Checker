@@ -120,7 +120,7 @@
             %>
               <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>" 
                    data-date="<%= item.from.format('YYYY-MM-DD') %>">
-                <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
+                <%= item.from.format('ddd, MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
               </div>
             <% }) %>
           <% } %>
