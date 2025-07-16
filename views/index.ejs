@@ -12,12 +12,19 @@
     }
     h1 {
       text-align: center;
+      margin-bottom: 20px;
+    }
+    .filter-group {
+      margin-bottom: 20px;
     }
     .user {
-      margin-bottom: 20px;
+      margin: 10px 0 20px 20px;
     }
     .entry {
       padding: 5px 0;
+    }
+    .entry:hover {
+      background: #f0f0f0;
     }
     .conflict, .weekend-off {
       color: red;
@@ -35,15 +42,30 @@
     .type-appointment {
       color: #9932cc;
     }
+    .group-header {
+      font-size: 1.3rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .group-Adult { background: #cce5ff; }
+    .group-Youth { background: #d4edda; }
+    .group-Part { background: #fff3cd; }
+    .user-group { display: none; }
+    .user-group.open { display: block; }
   </style>
 </head>
 <body>
   <h1>Desk Conflict Checker</h1>
 
-  <label for="search">Filter by Name:</label>
-  <input type="text" id="search" onkeyup="filterList()" placeholder="Type a name...">
+  <div class="filter-group">
+    <label for="search">Filter by Name:</label>
+    <input type="text" id="search" onkeyup="filterList()" placeholder="Type a name...">
+  </div>
 
-  <div style="margin-top: 10px;">
+  <div class="filter-group">
     <label><input type="checkbox" class="type-filter" value="conflict" checked> Conflict</label>
     <label><input type="checkbox" class="type-filter" value="type-shift" checked> Shift</label>
     <label><input type="checkbox" class="type-filter" value="type-timeoff" checked> Time Off</label>
@@ -51,34 +73,52 @@
     <label><input type="checkbox" class="type-filter" value="type-appointment" checked> Appointment</label>
   </div>
 
-  <div style="margin-top: 10px;">
+  <div class="filter-group">
     <label>Start Date: <input type="date" id="startDate" onchange="filterList()"></label>
     <label>End Date: <input type="date" id="endDate" onchange="filterList()"></label>
   </div>
 
-  <% Object.keys(conflicts).forEach(name => { %>
-    <div class="user">
-      <h2><%= name %></h2>
-      <% if (conflicts[name].length === 0) { %>
-        <p>No conflicts found.</p>
-      <% } else { %>
-        <% conflicts[name].forEach(item => {
-          const type = item.type.toLowerCase();
-          const isConflict = item.conflict;
-          const isWeekendOff = item.type.includes("Day Off for Weekend");
-          let typeClass = '';
+  <% const groups = {
+    'Adult Services': Object.keys(conflicts).filter(name =>
+      !["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Claire Tomkin", "Joanna Rooney",
+        "Gail Fell", "Susan Kramer", "ToniAnne Rigano", "Alex Shoshani"].includes(name)
+    ),
+    'Youth Services': ["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Claire Tomkin", "Joanna Rooney"],
+    'Part Timers': ["Gail Fell", "Susan Kramer", "ToniAnne Rigano", "Alex Shoshani"]
+  }; %>
 
-          if (type.startsWith('shift')) typeClass = 'type-shift';
-          else if (type.startsWith('time off')) typeClass = 'type-timeoff';
-          else if (type.startsWith('event')) typeClass = 'type-event';
-          else if (type.startsWith('appointment')) typeClass = 'type-appointment';
-        %>
-          <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>" 
-               data-date="<%= item.from.format('YYYY-MM-DD') %>">
-            <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
-          </div>
-        <% }) %>
-      <% } %>
+  <% Object.entries(groups).forEach(([groupName, names]) => { 
+    const groupKey = groupName.includes("Adult") ? "Adult" : groupName.includes("Youth") ? "Youth" : "Part";
+  %>
+    <div class="group-header group-<%= groupKey %>" onclick="toggleGroup('<%= groupKey %>')">
+      ▶ <%= groupName %>
+    </div>
+    <div class="user-group group-<%= groupKey %>">
+      <% names.forEach(name => { %>
+        <div class="user">
+          <h3><%= name %></h3>
+          <% if (!conflicts[name] || conflicts[name].length === 0) { %>
+            <p>No conflicts found.</p>
+          <% } else { %>
+            <% conflicts[name].forEach(item => {
+              const type = item.type.toLowerCase();
+              const isConflict = item.conflict;
+              const isWeekendOff = item.type.includes("Day Off for Weekend");
+              let typeClass = '';
+
+              if (type.startsWith('shift')) typeClass = 'type-shift';
+              else if (type.startsWith('time off')) typeClass = 'type-timeoff';
+              else if (type.startsWith('event')) typeClass = 'type-event';
+              else if (type.startsWith('appointment')) typeClass = 'type-appointment';
+            %>
+              <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>" 
+                   data-date="<%= item.from.format('YYYY-MM-DD') %>">
+                <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      <% }) %>
     </div>
   <% }) %>
 
@@ -91,7 +131,7 @@
 
       const users = document.querySelectorAll(".user");
       users.forEach(user => {
-        const name = user.querySelector("h2").innerText.toLowerCase();
+        const name = user.querySelector("h3").innerText.toLowerCase();
         const entries = user.querySelectorAll(".entry");
 
         let visibleEntryCount = 0;
@@ -114,6 +154,11 @@
 
         user.style.display = visibleEntryCount > 0 ? "" : "none";
       });
+    }
+
+    function toggleGroup(groupClass) {
+      const groupEl = document.querySelector(`.user-group.group-${groupClass}`);
+      groupEl.classList.toggle("open");
     }
   </script>
 </body>
