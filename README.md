@@ -1,6 +1,4 @@
-from IPython.display import display, HTML
 
-readme_html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
