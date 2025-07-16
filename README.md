@@ -131,22 +131,49 @@ PORT=3000</code></pre>
   </div>
 
   <div class="section">
-    <h2>🌐 Step 3: Create a Web Service</h2>
-    <ol>
-      <li>Log in at <a href="https://dashboard.render.com" target="_blank">https://dashboard.render.com</a></li>
-      <li>Click <strong>New +</strong> → <strong>Web Service</strong></li>
-      <li>Connect to your GitHub repository</li>
-      <li>Fill in the fields as follows:</li>
-    </ol>
+<h2>🌐 Step 3: Create a Web Service</h2>
+<ol>
+  <li>Log in at <a href="https://dashboard.render.com" target="_blank">https://dashboard.render.com</a></li>
+  <li>Click <strong>New + → Web Service</strong></li>
+  <li>Connect to your GitHub repository</li>
+  <li>Fill in the fields as follows:</li>
+</ol>
 
+<table border="1" cellspacing="0" cellpadding="6">
+  <thead>
+    <tr>
+      <th>Setting</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Name</strong></td>
+      <td><code>desk-conflict-checker</code></td>
+    </tr>
+    <tr>
+      <td><strong>Environment</strong></td>
+      <td><code>Node</code></td>
+    </tr>
+    <tr>
+      <td><strong>Build Command</strong></td>
+      <td><code>npm install</code></td>
+    </tr>
+    <tr>
+      <td><strong>Start Command</strong></td>
+      <td><code>npm start</code></td>
+    </tr>
+    <tr>
+      <td><strong>Region</strong></td>
+      <td><code>US</code></td>
+    </tr>
+    <tr>
+      <td><strong>Branch</strong></td>
+      <td><code>main</code></td>
+    </tr>
+  </tbody>
+</table>
 
-      <tr><th>Setting</th><th>Value</th></tr>
-      <tr><td>Name</td><td><code>desk-conflict-checker</code></td></tr>
-      <tr><td>Environment</td><td><code>Node</code></td></tr>
-      <tr><td>Build Command</td><td><code>npm install</code></td></tr>
-      <tr><td>Start Command</td><td><code>npm start</code></td></tr>
-      <tr><td>Region</td><td><code>US</code></td></tr>
-      <tr><td>Branch</td><td><code>main</code></td></tr>
 
   </div>
 
