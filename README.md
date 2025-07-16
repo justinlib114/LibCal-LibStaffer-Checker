@@ -139,7 +139,7 @@ PORT=3000</code></pre>
       <li>Fill in the fields as follows:</li>
     </ol>
 
-    <table>
+
       <tr><th>Setting</th><th>Value</th></tr>
       <tr><td>Name</td><td><code>desk-conflict-checker</code></td></tr>
       <tr><td>Environment</td><td><code>Node</code></td></tr>
@@ -147,7 +147,7 @@ PORT=3000</code></pre>
       <tr><td>Start Command</td><td><code>npm start</code></td></tr>
       <tr><td>Region</td><td><code>US</code></td></tr>
       <tr><td>Branch</td><td><code>main</code></td></tr>
-    </table>
+
   </div>
 
   <div class="section">
