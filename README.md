@@ -95,6 +95,3 @@ PORT=3000</code></pre>
   </ol>
 </body>
 </html>
-"""
-
-display(HTML(readme_html))
