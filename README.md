@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Desk Conflict Checker</title>
 </head>
 <body style="font-family: Arial, sans-serif; max-width: 800px; margin: auto; line-height: 1.6; padding: 20px;">
 
