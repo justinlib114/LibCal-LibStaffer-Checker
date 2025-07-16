@@ -95,7 +95,7 @@
 
 
   <% Object.entries(groups).forEach(([groupName, names]) => { 
-    const groupKey = groupName.includes("Adult") ? "Adult" : groupName.includes("Youth") ? "Youth" : "Part";
+    let groupKey = "Unknown"; if (groupName.includes("Adult")) groupKey = "Adult"; else if (groupName.includes("Youth")) groupKey = "Youth"; else if (groupName.includes("Part")) groupKey = "Part"; else if (groupName.includes("Admin")) groupKey = "Admin";
   %>
     <div class="group-header group-<%= groupKey %>" onclick="toggleGroup('<%= groupKey %>')">
       ▶ <%= groupName %>
