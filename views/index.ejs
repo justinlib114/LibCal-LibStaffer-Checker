@@ -4,12 +4,41 @@
   <meta charset="UTF-8">
   <title>Desk Conflict Checker</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f9f9f9; color: #333; padding: 20px; }
-    h1 { text-align: center; }
-    .user { margin-bottom: 20px; }
-    .conflict, .weekend-off { color: red; font-weight: bold; }
-    .entry { padding: 5px 0; }
-    label, input { font-size: 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .user {
+      margin-bottom: 20px;
+    }
+    .entry {
+      padding: 5px 0;
+    }
+
+    /* Conflict and Weekend styles */
+    .conflict, .weekend-off {
+      color: red;
+      font-weight: bold;
+    }
+
+    /* Type color codes */
+    .type-shift {
+      color: #1e90ff; /* Dodger Blue */
+    }
+    .type-timeoff {
+      color: #ffa500; /* Orange */
+    }
+    .type-event {
+      color: #228b22; /* Forest Green */
+    }
+    .type-appointment {
+      color: #9932cc; /* Dark Orchid */
+    }
   </style>
 </head>
 <body>
@@ -23,8 +52,18 @@
       <% if (conflicts[name].length === 0) { %>
         <p>No conflicts found.</p>
       <% } else { %>
-        <% conflicts[name].forEach(item => { %>
-          <div class="entry <%= item.conflict || item.type.includes('Day Off for Weekend') ? 'conflict' : '' %>">
+        <% conflicts[name].forEach(item => {
+          const type = item.type.toLowerCase();
+          const isConflict = item.conflict;
+          const isWeekendOff = item.type.includes("Day Off for Weekend");
+          let typeClass = '';
+
+          if (type.startsWith('shift')) typeClass = 'type-shift';
+          else if (type.startsWith('time off')) typeClass = 'type-timeoff';
+          else if (type.startsWith('event')) typeClass = 'type-event';
+          else if (type.startsWith('appointment')) typeClass = 'type-appointment';
+        %>
+          <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>">
             <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
           </div>
         <% }) %>
