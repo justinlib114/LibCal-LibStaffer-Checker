@@ -19,32 +19,42 @@
     .entry {
       padding: 5px 0;
     }
-
-    /* Conflict and Weekend styles */
     .conflict, .weekend-off {
       color: red;
       font-weight: bold;
     }
-
-    /* Type color codes */
     .type-shift {
-      color: #1e90ff; /* Dodger Blue */
+      color: #1e90ff;
     }
     .type-timeoff {
-      color: #ffa500; /* Orange */
+      color: #ffa500;
     }
     .type-event {
-      color: #228b22; /* Forest Green */
+      color: #228b22;
     }
     .type-appointment {
-      color: #9932cc; /* Dark Orchid */
+      color: #9932cc;
     }
   </style>
 </head>
 <body>
   <h1>Desk Conflict Checker</h1>
+
   <label for="search">Filter by Name:</label>
   <input type="text" id="search" onkeyup="filterList()" placeholder="Type a name...">
+
+  <div style="margin-top: 10px;">
+    <label><input type="checkbox" class="type-filter" value="conflict" checked> Conflict</label>
+    <label><input type="checkbox" class="type-filter" value="type-shift" checked> Shift</label>
+    <label><input type="checkbox" class="type-filter" value="type-timeoff" checked> Time Off</label>
+    <label><input type="checkbox" class="type-filter" value="type-event" checked> Event</label>
+    <label><input type="checkbox" class="type-filter" value="type-appointment" checked> Appointment</label>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <label>Start Date: <input type="date" id="startDate" onchange="filterList()"></label>
+    <label>End Date: <input type="date" id="endDate" onchange="filterList()"></label>
+  </div>
 
   <% Object.keys(conflicts).forEach(name => { %>
     <div class="user">
@@ -63,7 +73,8 @@
           else if (type.startsWith('event')) typeClass = 'type-event';
           else if (type.startsWith('appointment')) typeClass = 'type-appointment';
         %>
-          <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>">
+          <div class="entry <%= isConflict || isWeekendOff ? 'conflict' : typeClass %>" 
+               data-date="<%= item.from.format('YYYY-MM-DD') %>">
             <%= item.from.format('MMM D, h:mm A') %> – <%= item.to.format('h:mm A') %> : <%= item.type %>
           </div>
         <% }) %>
@@ -73,11 +84,35 @@
 
   <script>
     function filterList() {
-      const input = document.getElementById("search").value.toLowerCase();
+      const nameFilter = document.getElementById("search").value.toLowerCase();
+      const typeFilters = Array.from(document.querySelectorAll(".type-filter:checked")).map(cb => cb.value);
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
       const users = document.querySelectorAll(".user");
       users.forEach(user => {
         const name = user.querySelector("h2").innerText.toLowerCase();
-        user.style.display = name.includes(input) ? "" : "none";
+        const entries = user.querySelectorAll(".entry");
+
+        let visibleEntryCount = 0;
+
+        entries.forEach(entry => {
+          const matchesName = name.includes(nameFilter);
+          const matchesType = typeFilters.some(cls => entry.classList.contains(cls));
+
+          const entryDate = entry.getAttribute("data-date");
+          const withinStart = !startDate || entryDate >= startDate;
+          const withinEnd = !endDate || entryDate <= endDate;
+
+          if (matchesName && matchesType && withinStart && withinEnd) {
+            entry.style.display = "";
+            visibleEntryCount++;
+          } else {
+            entry.style.display = "none";
+          }
+        });
+
+        user.style.display = visibleEntryCount > 0 ? "" : "none";
       });
     }
   </script>
