@@ -149,8 +149,8 @@ app.get("/", async (req, res) => {
     for (let event of events) {
       const ownerName = event?.owner?.name;
       if (conflicts[ownerName]) {
-        const s = dayjs(event.start);
-        const e = dayjs(event.end);
+      const s = dayjs.utc(event.start).tz("America/New_York");
+      const e = dayjs.utc(event.end).tz("America/New_York");
         if (s.hour() >= 9 && e.hour() <= 21) {
           conflicts[ownerName].push({ type: `Event (${event.title})`, from: s, to: e });
         }
