@@ -78,14 +78,24 @@
     <label>End Date: <input type="date" id="endDate" onchange="filterList()"></label>
   </div>
 
-  <% const groups = {
-    'Adult Services': Object.keys(conflicts).filter(name =>
-      !["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Claire Tomkin", "Joanna Rooney",
-        "Gail Fell", "Susan Kramer", "ToniAnne Rigano", "Alex Shoshani"].includes(name)
-    ),
-    'Youth Services': ["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Claire Tomkin", "Joanna Rooney"],
-    'Part Timers': ["Gail Fell", "Susan Kramer", "ToniAnne Rigano", "Alex Shoshani"]
-  }; %>
+ <%
+  const groups = {
+    'Adult Services (AS)': [
+      "Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan",
+      "Gary LaPicola", "Justin Sanchez"
+    ],
+    'Youth Services (YS)': [
+      "Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Joanna Rooney", "Claire Tomkin"
+    ],
+    'Part Timers (PT)': [
+      "Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "TonieAnne Rigano", "Alex Shoshani"
+    ],
+    'Administration (AD)': [
+      "Christa O'Sullivan", "Christina Ryan-Linder"
+    ]  
+  };
+%>
+
 
   <% Object.entries(groups).forEach(([groupName, names]) => { 
     const groupKey = groupName.includes("Adult") ? "Adult" : groupName.includes("Youth") ? "Youth" : "Part";
