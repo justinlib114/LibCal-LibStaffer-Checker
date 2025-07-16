@@ -2,36 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Desk Conflict Checker - README</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 0 20px;
-      line-height: 1.6;
-      background: #fefefe;
-      color: #333;
-    }
-    h1, h2, h3 {
-      color: #222;
-    }
-    code {
-      background: #eee;
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-    pre {
-      background: #f4f4f4;
-      padding: 10px;
-      overflow-x: auto;
-      border-radius: 5px;
-    }
-    ul {
-      margin-top: 0;
-    }
-  </style>
-</head>
+  
 <body>
 
   <h1>🧭 Desk Conflict Checker</h1>
