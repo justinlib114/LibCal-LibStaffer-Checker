@@ -166,6 +166,19 @@ app.get("/", async (req, res) => {
   res.render("index", { conflicts });
 });
 
+
+function formatTimeBlock(from, to) {
+  const format = h => {
+    const hour = Math.floor(h);
+    const minute = h % 1 === 0 ? '' : ':30';
+    const suffix = hour >= 12 ? 'pm' : 'am';
+    const displayHour = ((hour + 11) % 12 + 1) + minute;
+    return displayHour + suffix;
+  };
+  return `${format(from)}–${format(to)}`;
+}
+
+
 app.get("/autoschedule", async (req, res) => {
   const startParam = req.query.start || dayjs().format("YYYY-MM-DD");
   const endParam = req.query.end || dayjs().add(13, "day").format("YYYY-MM-DD");
@@ -295,8 +308,8 @@ const topStaff = shuffle(bestGroup).map(s => s.name); // all available, randomiz
 
 
       scheduleSuggestions.push({
-        date: d.format("YYYY-MM-DD"),
-        block: block.label,
+        date: d.format("dddd, MMMM D, YYYY"),
+        block: formatTimeBlock(block.from, block.to),
         suggestions: topStaff.length ? topStaff.join(", ") : "No one available"
       });
     }
