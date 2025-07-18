@@ -258,12 +258,13 @@ app.get("/autoschedule", async (req, res) => {
     scheduleSuggestions.push({ date: d.format("YYYY-MM-DD"), suggestion: sorted[0]?.name || "No one available" });
   }
 
-  res.render("autoschedule", {
-    scheduleSuggestions,
-    startDate: startParam,
-    endDate: endParam
-  });
+res.render("autoschedule", {
+  scheduleSuggestions,
+  startDate: startParam,
+  endDate: endParam,
+  dayjs // <- pass dayjs to the view
 });
+
 
 
 const PORT = process.env.PORT || 3000;
