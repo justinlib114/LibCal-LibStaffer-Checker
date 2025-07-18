@@ -377,68 +377,114 @@ app.get("/autoschedule/compare", async (req, res) => {
   const startDate = dayjs(startParam).startOf("day");
   const endDate = dayjs(endParam).endOf("day");
 
-  const libstafferToken = await getLibstafferToken();
-
-  const allSuggestions = {
-    rotation: [],
-    random: [],
-    roundrobin: []
+  const groupMap = {
+    "Adult Services (AS)": ["Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan", "Gary LaPicola", "Justin Sanchez"],
+    "Part Timers (PT)": ["Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "ToniAnne Rigano", "Alex Shoshani"],
+    "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
   };
 
-  const baseSuggestionEngine = async (mode) => {
-    const suggestions = [];
+  const staffList = [...groupMap["Adult Services (AS)"], ...groupMap["Part Timers (PT)"], ...groupMap["Administration (AD)"]];
 
-    let index = 0;
-    const rotationOrder = [...libstafferUsers.map(id => userIdToName[id])];
-    const randomOrder = [...rotationOrder].sort(() => 0.5 - Math.random());
-    const roundRobinQueue = [...rotationOrder];
+  const shiftMap = {
+    1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+    2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+    3: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+    4: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+    5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
+  };
+
+  // Collect staff conflicts from the previous /autoschedule logic
+  const staffConflicts = req.app.locals.staffConflicts || {};
+
+  function getAvailableStaff(from, to) {
+    return staffList.filter(name => {
+      const events = staffConflicts[name] || [];
+      return !events.some(ev => isOverlapping(from, to, ev.from, ev.to));
+    });
+  }
+
+  function assignStaff(strategy, rotationState) {
+    const assigned = [];
 
     for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
-      const dow = d.day();
-      const blocks = {
-        1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
-        2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
-        3: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
-        4: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
-        5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
-      }[dow];
+      const dayShifts = shiftMap[d.day()];
+      if (!dayShifts) continue;
 
-      if (!blocks) continue;
+      const dateStr = d.format("YYYY-MM-DD");
+      const dayAssignments = [];
 
-      for (let block of blocks) {
-        let assigned = "—";
-        if (mode === "rotation") {
-          assigned = rotationOrder[index % rotationOrder.length];
-        } else if (mode === "random") {
-          assigned = randomOrder[index % randomOrder.length];
-        } else if (mode === "roundrobin") {
-          assigned = roundRobinQueue.shift();
-          roundRobinQueue.push(assigned);
+      for (let block of dayShifts) {
+        const from = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
+        const to = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
+        const blockLabel = formatTimeBlock(block.from, block.to);
+
+        const available = getAvailableStaff(from, to);
+
+        // Prefer Adult Services
+        let assignedName = available.find(n => groupMap["Adult Services (AS)"].includes(n));
+        let isFallback = false;
+
+        if (!assignedName) {
+          assignedName = available.find(n => groupMap["Part Timers (PT)"].includes(n) || groupMap["Administration (AD)"].includes(n));
+          isFallback = true;
         }
 
-        suggestions.push({
-          date: d.format("YYYY-MM-DD"),
-          block: formatTimeBlock(block.from, block.to),
-          assigned
-        });
+        // If still no one, mark empty
+        if (!assignedName) {
+          assignedName = "—";
+          isFallback = false;
+        }
 
-        index++;
+        // Strategy modifies order (round robin, etc.)
+        if (strategy === "rotation" && available.length > 0) {
+          assignedName = available[rotationState.index % available.length];
+          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
+          rotationState.index++;
+        } else if (strategy === "random" && available.length > 0) {
+          assignedName = available[Math.floor(Math.random() * available.length)];
+          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
+        } else if (strategy === "roundrobin" && available.length > 0) {
+          assignedName = rotationState.queue.shift();
+          if (!available.includes(assignedName)) {
+            assignedName = available[0]; // fallback
+          }
+          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
+          rotationState.queue.push(assignedName);
+        }
+
+        dayAssignments.push({
+          block: blockLabel,
+          assigned: assignedName,
+          isFallback
+        });
       }
+
+      assigned.push({
+        date: dateStr,
+        blocks: dayAssignments
+      });
     }
 
-    return suggestions;
+    return assigned;
+  }
+
+  const rotationState = { index: 0 };
+  const roundRobinState = { queue: [...staffList] };
+
+  const result = {
+    rotation: assignStaff("rotation", rotationState),
+    random: assignStaff("random", {}),
+    roundrobin: assignStaff("roundrobin", roundRobinState)
   };
 
-  allSuggestions.rotation = await baseSuggestionEngine("rotation");
-  allSuggestions.random = await baseSuggestionEngine("random");
-  allSuggestions.roundrobin = await baseSuggestionEngine("roundrobin");
-
   res.render("compare", {
-    suggestions: allSuggestions,
+    suggestions: result,
     startDate: startParam,
     endDate: endParam
   });
 });
+
+
 
 
 
