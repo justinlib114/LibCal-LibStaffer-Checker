@@ -365,6 +365,22 @@ scheduleSuggestions.push({
   });
 });
 
+app.get("/autoschedule/generate", (req, res) => {
+  const start = dayjs().format("YYYY-MM-DD");
+  const end = dayjs().add(13, "day").format("YYYY-MM-DD");
+  res.render("generate-form", { start, end });
+});
+
+app.get("/autoschedule/compare", async (req, res) => {
+  const startDate = req.query.start;
+  const endDate = req.query.end;
+
+  // TODO: generate 3 alternate schedule variations
+  res.send(`<h1>Coming Soon</h1><p>Would generate 3 schedules from ${startDate} to ${endDate}</p>`);
+});
+
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
