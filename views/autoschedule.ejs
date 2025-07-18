@@ -37,12 +37,14 @@
     </tr>
   </thead>
   <tbody>
-    <% scheduleSuggestions.forEach(s => {
-      const group = s.suggestions.includes("No one") ? "" :
-        s.suggestions.match(/Amelia|Antonio|Nicole|Gary|Emily|Justin/) ? "as" :
-        s.suggestions.match(/Angela|Gail|Tonie|Susan|Patricia|Alex/) ? "pt" :
-        s.suggestions.match(/Christa|Christina/) ? "ad" : "";
-    %>
+   <% scheduleSuggestions.forEach(s => {
+  const names = s.suggestions.map(p => p.name || "").join(" ");
+  const group = names.includes("No one") ? "" :
+    /Amelia|Antonio|Nicole|Gary|Emily|Justin/.test(names) ? "as" :
+    /Angela|Gail|Tonie|Susan|Patricia|Alex/.test(names) ? "pt" :
+    /Christa|Christina/.test(names) ? "ad" : "";
+%>
+
       <tr class="<%= group %>">
         <td><%= s.date %></td>
         <td><%= s.block %></td>
