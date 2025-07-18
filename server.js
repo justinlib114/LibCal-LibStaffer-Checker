@@ -257,8 +257,8 @@ app.get("/autoschedule", async (req, res) => {
 
           const hasConflict = conflicts.some(c => isOverlapping(fromTime, toTime, c.from, c.to));
           if (!hasConflict) {
-            const conflictCount = conflicts.filter(c => c.from.isSame(d, 'day')).length;
-            const alreadyDesk = [...dailyDeskAssignments[dateKey]].includes(name);
+            const conflictCount = conflicts.filter(c => dayjs(c.from).isSame(d, 'day')).length;
+            const alreadyDesk = dailyDeskAssignments[dateKey].has(name);
             available.push({
               name,
               label: `${name} (${conflictCount})`,
