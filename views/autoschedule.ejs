@@ -15,6 +15,10 @@
     .bold-red { color: red; font-weight: bold; }
     details summary { cursor: pointer; }
     ul { padding-left: 20px; text-align: left; }
+    .suggestion-wrapper {
+      display: inline-block;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
@@ -56,35 +60,37 @@
             <% } %>
           </td>
           <td>
-            <% s.suggestions.forEach(group => { %>
-              <strong><%= group.group %></strong><br>
-              <% group.people.forEach(p => { 
-                const personConflicts = staffConflicts[p.name] || [];
-                const personConflictsToday = personConflicts.filter(c =>
-                  dayjs(c.from).isSame(dayjs(s.date), "day")
-                );
-              %>
-                <details>
-                  <summary style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>">
-                    <%= p.label %>
-                  </summary>
-                  <% if (personConflictsToday.length === 0) { %>
-                    <em>No conflicts</em>
-                  <% } else { %>
-                    <ul>
-                      <% personConflictsToday.forEach(c => { %>
-                        <li>
-                          <%= c.type %>: 
-                          <%= dayjs(c.from).format("h:mma") %>–<%= dayjs(c.to).format("h:mma") %>
-                          <% if (c.title) { %> – <%= c.title %><% } %>
-                        </li>
-                      <% }) %>
-                    </ul>
-                  <% } %>
-                </details>
+            <div class="suggestion-wrapper">
+              <% s.suggestions.forEach(group => { %>
+                <strong><%= group.group %></strong><br>
+                <% group.people.forEach(p => { 
+                  const personConflicts = staffConflicts[p.name] || [];
+                  const personConflictsToday = personConflicts.filter(c =>
+                    dayjs(c.from).isSame(dayjs(s.date), "day")
+                  );
+                %>
+                  <details>
+                    <summary style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>">
+                      <%= p.label %>
+                    </summary>
+                    <% if (personConflictsToday.length === 0) { %>
+                      <em>No conflicts</em>
+                    <% } else { %>
+                      <ul>
+                        <% personConflictsToday.forEach(c => { %>
+                          <li>
+                            <%= c.type %>: 
+                            <%= dayjs(c.from).format("h:mma") %>–<%= dayjs(c.to).format("h:mma") %>
+                            <% if (c.title) { %> – <%= c.title %><% } %>
+                          </li>
+                        <% }) %>
+                      </ul>
+                    <% } %>
+                  </details>
+                <% }) %>
+                <br>
               <% }) %>
-              <br>
-            <% }) %>
+            </div>
           </td>
         </tr>
       <% }) %>
