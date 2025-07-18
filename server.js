@@ -280,18 +280,40 @@ Object.entries(staffConflicts).forEach(([_, events]) => {
 
           if (dayCount >= MAX_SHIFTS_PER_DAY || weekCount >= MAX_SHIFTS_PER_WEEK) continue;
 
-          const priorShift = conflicts.find(c =>
-            c.type === "Shift" &&
-            dayjs(c.from).isSame(d, "day") &&
-            c.from.isBefore(fromTime)
-          );
+const priorShift = conflicts.find(c =>
+  c.type === "Shift" &&
+  dayjs(c.from).isSame(d, "day") &&
+  c.from.isBefore(fromTime)
+);
 
-          groupSuggestions.push({
-            name,
-            label: `${name} (${dayCount})${priorShift ? ` – Prior: ${formatTimeBlock(priorShift.from.hour() + priorShift.from.minute() / 60, priorShift.to.hour() + priorShift.to.minute() / 60)}` : ""}`,
-            alreadyAssigned: !!priorShift
-          });
-        }
+const futureShift = conflicts.find(c =>
+  c.type === "Shift" &&
+  dayjs(c.from).isSame(d, "day") &&
+  c.from.isAfter(toTime)
+);
+
+const hasAnySameDayShift = priorShift || futureShift;
+
+
+let timeNote = "";
+if (priorShift) {
+  timeNote = ` – Prior: ${formatTimeBlock(
+    priorShift.from.hour() + priorShift.from.minute() / 60,
+    priorShift.to.hour() + priorShift.to.minute() / 60
+  )}`;
+} else if (futureShift) {
+  timeNote = ` – Later: ${formatTimeBlock(
+    futureShift.from.hour() + futureShift.from.minute() / 60,
+    futureShift.to.hour() + futureShift.to.minute() / 60
+  )}`;
+}
+
+groupSuggestions.push({
+  name,
+  label: `${name} (${dayCount})${timeNote}`,
+  alreadyAssigned: hasAnySameDayShift
+});
+
 
         groupSuggestions.sort((a, b) => {
           const weekA = shiftCounts[a.name]?.[d.startOf("week").format("YYYY-MM-DD")] || 0;
