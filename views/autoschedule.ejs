@@ -46,7 +46,12 @@
       <tr class="<%= group %>">
         <td><%= s.date %></td>
         <td><%= s.block %></td>
-        <td><%= s.suggestions %></td>
+<td>
+  <% s.suggestions.forEach(p => { %>
+    <span style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>"><%= p.label %></span><br>
+  <% }) %>
+</td>
+
       </tr>
     <% }); %>
   </tbody>
