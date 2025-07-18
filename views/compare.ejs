@@ -4,102 +4,53 @@
   <meta charset="UTF-8">
   <title>Compare Auto Schedule Permutations</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f8f8f8; }
-    h1, h2 { text-align: center; }
-    form { text-align: center; margin-bottom: 20px; }
-    .comparison-grid {
-      display: flex;
-      gap: 20px;
-      justify-content: space-around;
-      flex-wrap: wrap;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      background: #fff;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      padding: 8px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-    .column {
-      flex: 1 1 30%;
-      min-width: 300px;
-    }
+    body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 20px; }
+    h1 { text-align: center; }
+    h2 { margin-top: 40px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+    .container { display: flex; gap: 20px; justify-content: space-around; flex-wrap: wrap; }
+    .schedule-table { background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 5px; width: 100%; max-width: 600px; }
+    .day-block { margin-bottom: 30px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    .fallback { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
+
   <h1>Compare Auto Schedule Permutations</h1>
+  <p style="text-align: center;">From <strong><%= startDate %></strong> to <strong><%= endDate %></strong></p>
 
-  <form method="GET" action="/autoschedule/compare">
-    <label>
-      Start Date:
-      <input type="date" name="start" value="<%= startDate %>">
-    </label>
-    <label>
-      End Date:
-      <input type="date" name="end" value="<%= endDate %>">
-    </label>
-    <button type="submit">Compare</button>
-  </form>
+  <div class="container">
+    <% Object.entries(suggestions).forEach(([mode, days]) => { %>
+      <div class="schedule-table">
+        <h2><%= mode.charAt(0).toUpperCase() + mode.slice(1) %></h2>
 
-  <div class="comparison-grid">
-    <div class="column">
-      <h2>Rotation</h2>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Block</th><th>Assigned</th></tr>
-        </thead>
-        <tbody>
-          <% suggestions.rotation.forEach(s => { %>
-            <tr>
-              <td><%= s.date %></td>
-              <td><%= s.block %></td>
-              <td><%= s.assigned %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="column">
-      <h2>Random</h2>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Block</th><th>Assigned</th></tr>
-        </thead>
-        <tbody>
-          <% suggestions.random.forEach(s => { %>
-            <tr>
-              <td><%= s.date %></td>
-              <td><%= s.block %></td>
-              <td><%= s.assigned %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="column">
-      <h2>Round Robin</h2>
-      <table>
-        <thead>
-          <tr><th>Date</th><th>Block</th><th>Assigned</th></tr>
-        </thead>
-        <tbody>
-          <% suggestions.roundrobin.forEach(s => { %>
-            <tr>
-              <td><%= s.date %></td>
-              <td><%= s.block %></td>
-              <td><%= s.assigned %></td>
-            </tr>
-          <% }) %>
-        </tbody>
-      </table>
-    </div>
+        <% days.forEach(day => { %>
+          <div class="day-block">
+            <h3><%= dayjs(day.date).format("dddd, MMMM D, YYYY") %></h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Time Block</th>
+                  <th>Assigned</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% day.blocks.forEach(b => { %>
+                  <tr>
+                    <td><%= b.block %></td>
+                    <td class="<%= b.isFallback ? 'fallback' : '' %>">
+                      <%= b.isFallback ? "⚠️ " : "" %><%= b.assigned %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% }) %>
+      </div>
+    <% }) %>
   </div>
+
 </body>
 </html>
