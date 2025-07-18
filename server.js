@@ -372,12 +372,74 @@ app.get("/autoschedule/generate", (req, res) => {
 });
 
 app.get("/autoschedule/compare", async (req, res) => {
-  const startDate = req.query.start;
-  const endDate = req.query.end;
+  const startParam = req.query.start || dayjs().format("YYYY-MM-DD");
+  const endParam = req.query.end || dayjs().add(6, "day").format("YYYY-MM-DD");
+  const startDate = dayjs(startParam).startOf("day");
+  const endDate = dayjs(endParam).endOf("day");
 
-  // TODO: generate 3 alternate schedule variations
-  res.send(`<h1>Coming Soon</h1><p>Would generate 3 schedules from ${startDate} to ${endDate}</p>`);
+  const libstafferToken = await getLibstafferToken();
+
+  const allSuggestions = {
+    rotation: [],
+    random: [],
+    roundrobin: []
+  };
+
+  const baseSuggestionEngine = async (mode) => {
+    const suggestions = [];
+
+    let index = 0;
+    const rotationOrder = [...libstafferUsers.map(id => userIdToName[id])];
+    const randomOrder = [...rotationOrder].sort(() => 0.5 - Math.random());
+    const roundRobinQueue = [...rotationOrder];
+
+    for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
+      const dow = d.day();
+      const blocks = {
+        1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+        2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+        3: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+        4: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+        5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
+      }[dow];
+
+      if (!blocks) continue;
+
+      for (let block of blocks) {
+        let assigned = "—";
+        if (mode === "rotation") {
+          assigned = rotationOrder[index % rotationOrder.length];
+        } else if (mode === "random") {
+          assigned = randomOrder[index % randomOrder.length];
+        } else if (mode === "roundrobin") {
+          assigned = roundRobinQueue.shift();
+          roundRobinQueue.push(assigned);
+        }
+
+        suggestions.push({
+          date: d.format("YYYY-MM-DD"),
+          block: formatTimeBlock(block.from, block.to),
+          assigned
+        });
+
+        index++;
+      }
+    }
+
+    return suggestions;
+  };
+
+  allSuggestions.rotation = await baseSuggestionEngine("rotation");
+  allSuggestions.random = await baseSuggestionEngine("random");
+  allSuggestions.roundrobin = await baseSuggestionEngine("roundrobin");
+
+  res.render("compare", {
+    suggestions: allSuggestions,
+    startDate: startParam,
+    endDate: endParam
+  });
 });
+
 
 
 
