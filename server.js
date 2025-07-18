@@ -192,8 +192,7 @@ app.get("/autoschedule", async (req, res) => {
 
   const groupMap = {
     "Adult Services (AS)": ["Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan", "Gary LaPicola", "Justin Sanchez"],
-    "Youth Services (YS)": ["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Joanna Rooney", "Claire Tomkin"],
-    "Part Timers (PT)": ["Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "TonieAnne Rigano", "Alex Shoshani"],
+    "Part Timers (PT)": ["Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "ToniAnne Rigano", "Alex Shoshani"],
     "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
   };
 
@@ -205,9 +204,14 @@ app.get("/autoschedule", async (req, res) => {
     5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
   };
 
-  const staffConflicts = {};
-  const dailyDeskAssignments = {};
+  const MAX_SHIFTS_PER_DAY = 2;
+  const MAX_SHIFTS_PER_WEEK = 5;
 
+  const staffConflicts = {};
+  const shiftCounts = {};
+  const scheduleSuggestions = [];
+
+  // Collect all conflicts and track shift counts
   for (const userId of libstafferUsers) {
     const name = userIdToName[userId];
     staffConflicts[name] = [];
@@ -221,7 +225,11 @@ app.get("/autoschedule", async (req, res) => {
       for (const shift of data?.data?.shifts || []) {
         const from = dayjs(shift.from);
         const to = dayjs(shift.to);
-        staffConflicts[name].push({ from, to });
+        staffConflicts[name].push({ from, to, type: "Shift" });
+
+        const weekKey = from.startOf("week").format("YYYY-MM-DD");
+        shiftCounts[name] = shiftCounts[name] || {};
+        shiftCounts[name][weekKey] = (shiftCounts[name][weekKey] || 0) + 1;
       }
     }
 
@@ -233,53 +241,73 @@ app.get("/autoschedule", async (req, res) => {
     for (const t of timeoffs?.data?.data?.timeOff || []) {
       const from = dayjs(t.from);
       const to = dayjs(t.to);
-      staffConflicts[name].push({ from, to });
+      staffConflicts[name].push({ from, to, type: "Time Off" });
     }
   }
 
-  const scheduleSuggestions = [];
-
   for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
     const dow = d.day();
-    const dateKey = d.format("YYYY-MM-DD");
     if (!weekdayBlocks[dow]) continue;
-    if (!dailyDeskAssignments[dateKey]) dailyDeskAssignments[dateKey] = new Set();
 
     for (const block of weekdayBlocks[dow]) {
       const fromTime = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
       const toTime = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
 
-      const available = [];
+      // Check if someone is already scheduled for this block
+      const assignedAlready = Object.entries(staffConflicts).find(([_, events]) =>
+        events.some(e => isOverlapping(fromTime, toTime, e.from, e.to))
+      );
+      if (assignedAlready) continue; // Skip this block if filled
 
-      for (const [group, members] of Object.entries(groupMap)) {
-        for (const name of members) {
+      const allSuggestions = [];
+
+      for (const [group, names] of Object.entries(groupMap)) {
+        const groupSuggestions = [];
+
+        for (const name of names) {
           const conflicts = staffConflicts[name] || [];
-
           const hasConflict = conflicts.some(c => isOverlapping(fromTime, toTime, c.from, c.to));
-          if (!hasConflict) {
-            const conflictCount = conflicts.filter(c => dayjs(c.from).isSame(d, 'day')).length;
-const alreadyDesk = staffConflicts[name]?.some(c =>
-  c.type?.startsWith("Shift") &&
-  dayjs(c.from).isSame(d, "day") &&
-  c.from.isBefore(fromTime)
-);
+          if (hasConflict) continue;
 
-            available.push({
-              name,
-              label: `${name} (${conflictCount})`,
-              alreadyAssigned: alreadyDesk
-            });
-          }
+          const dateStr = d.format("YYYY-MM-DD");
+          const weekStr = d.startOf("week").format("YYYY-MM-DD");
+
+          const dayCount = conflicts.filter(c => dayjs(c.from).isSame(d, "day")).length;
+          const weekCount = (shiftCounts[name]?.[weekStr] || 0);
+
+          if (dayCount >= MAX_SHIFTS_PER_DAY || weekCount >= MAX_SHIFTS_PER_WEEK) continue;
+
+          const priorShift = conflicts.find(c =>
+            c.type === "Shift" &&
+            dayjs(c.from).isSame(d, "day") &&
+            c.from.isBefore(fromTime)
+          );
+
+          groupSuggestions.push({
+            name,
+            label: `${name} (${dayCount})${priorShift ? ` – Prior: ${formatTimeBlock(priorShift.from.hour() + priorShift.from.minute() / 60, priorShift.to.hour() + priorShift.to.minute() / 60)}` : ""}`,
+            alreadyAssigned: !!priorShift
+          });
+        }
+
+        groupSuggestions.sort((a, b) => {
+          const weekA = shiftCounts[a.name]?.[d.startOf("week").format("YYYY-MM-DD")] || 0;
+          const weekB = shiftCounts[b.name]?.[d.startOf("week").format("YYYY-MM-DD")] || 0;
+          return weekA - weekB;
+        });
+
+        if (groupSuggestions.length > 0) {
+          allSuggestions.push({
+            group,
+            people: groupSuggestions
+          });
         }
       }
-
-      // Record all names assigned to this block (assume they're all options)
-      available.forEach(p => dailyDeskAssignments[dateKey].add(p.name));
 
       scheduleSuggestions.push({
         date: d.format("dddd, MMMM D, YYYY"),
         block: formatTimeBlock(block.from, block.to),
-        suggestions: available.length ? available : [{ label: "No one available", alreadyAssigned: false }]
+        suggestions: allSuggestions.length > 0 ? allSuggestions : [{ group: "None", people: [{ label: "No one available", alreadyAssigned: false }] }]
       });
     }
   }
@@ -291,6 +319,7 @@ const alreadyDesk = staffConflicts[name]?.some(c =>
     dayjs
   });
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
