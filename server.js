@@ -307,13 +307,21 @@ Object.entries(staffConflicts).forEach(([_, events]) => {
         }
       }
 
-      scheduleSuggestions.push({
-        date: d.format("dddd, MMMM D, YYYY"),
-        block: formatTimeBlock(block.from, block.to),
-        suggestions: allSuggestions.length > 0 ? allSuggestions : [{ group: "None", people: [{ label: "No one available", alreadyAssigned: false }] }]
-      });
-    }
-  }
+      const scheduledNames = Object.entries(staffConflicts)
+  .filter(([_, events]) =>
+    events.some(e => e.type === "Shift" && isOverlapping(fromTime, toTime, e.from, e.to))
+  )
+  .map(([name, _]) => name);
+
+scheduleSuggestions.push({
+  date: d.format("dddd, MMMM D, YYYY"),
+  block: formatTimeBlock(block.from, block.to),
+  scheduled: scheduledNames,
+  suggestions: allSuggestions.length > 0
+    ? allSuggestions
+    : [{ group: "None", people: [{ label: "No one available", alreadyAssigned: false }] }]
+});
+
 
   res.render("autoschedule", {
     scheduleSuggestions,
