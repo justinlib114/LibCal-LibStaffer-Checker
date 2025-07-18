@@ -225,7 +225,7 @@ app.get("/autoschedule", async (req, res) => {
       for (const shift of data?.data?.shifts || []) {
         const from = dayjs(shift.from);
         const to = dayjs(shift.to);
-        staffConflicts[name].push({ from, to, type: "Shift" });
+        staffConflicts[name].push({ from, to, type: "Shift", title: shift.shiftName || "" });
 
         const weekKey = from.startOf("week").format("YYYY-MM-DD");
         shiftCounts[name] = shiftCounts[name] || {};
@@ -310,11 +310,11 @@ Object.entries(staffConflicts).forEach(([_, events]) => {
 const adultServices = groupMap["Adult Services (AS)"];
 const scheduledNames = Object.entries(staffConflicts)
   .filter(([name, events]) =>
-    adultServices.includes(name) &&
+    groupMap["Adult Services (AS)"].includes(name) &&
     events.some(e =>
       e.type === "Shift" &&
-      !e.type.toLowerCase().includes("off") &&
-      isOverlapping(fromTime, toTime, e.from, e.to)
+      isOverlapping(fromTime, toTime, e.from, e.to) &&
+      !(e.title?.toLowerCase().includes("off") || e.title?.toLowerCase().includes("close") || e.title?.toLowerCase().includes("closer"))
     )
   )
   .map(([name]) => name);
