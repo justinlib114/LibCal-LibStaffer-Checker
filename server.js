@@ -281,8 +281,18 @@ app.get("/autoschedule", async (req, res) => {
           ? availableByGroup.PT
           : availableByGroup.AD;
 
-      const sorted = bestGroup.sort((a, b) => a.shiftCount - b.shiftCount);
-      const topStaff = sorted.slice(0, 2).map(s => s.name); // top 2
+// Shuffle function
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+const shuffled = shuffle(bestGroup);
+const topStaff = shuffled.slice(0, 2).map(s => s.name); // pick 2 at random
+
 
       scheduleSuggestions.push({
         date: d.format("YYYY-MM-DD"),
