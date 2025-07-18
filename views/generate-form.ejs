@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Generate Schedules</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    form {
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    label { display: block; margin-top: 10px; }
+    button { margin-top: 20px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h1>Generate Alternate Desk Schedules</h1>
+  <form method="GET" action="/autoschedule/compare">
+    <label>
+      Start Date:
+      <input type="date" name="start" value="<%= start %>">
+    </label>
+    <label>
+      End Date:
+      <input type="date" name="end" value="<%= end %>" max="<%= dayjs().add(90, 'day').format('YYYY-MM-DD') %>">
+    </label>
+    <button type="submit">Generate 3 Schedule Variants</button>
+  </form>
+</body>
+</html>
