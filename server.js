@@ -378,12 +378,10 @@ app.get("/autoschedule/compare", async (req, res) => {
   const endDate = dayjs(endParam).endOf("day");
 
   const groupMap = {
-    "Adult Services (AS)": ["Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan", "Gary LaPicola", "Justin Sanchez"],
-    "Part Timers (PT)": ["Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "ToniAnne Rigano", "Alex Shoshani"],
-    "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
+    "Adult Services (AS)": ["Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan", "Gary LaPicola", "Justin Sanchez"]
   };
 
-  const allStaff = [...groupMap["Adult Services (AS)"], ...groupMap["Part Timers (PT)"], ...groupMap["Administration (AD)"]];
+  const allStaff = [...groupMap["Adult Services (AS)"]];
   const shiftMap = {
     1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
     2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
@@ -419,11 +417,10 @@ app.get("/autoschedule/compare", async (req, res) => {
       const conflicts = staffConflicts[name] || [];
       if (conflicts.some(c => isOverlapping(from, to, c.from, c.to))) return false;
 
-      // Check per-day shift assignment for Adult Services
-      const isAS = groupMap["Adult Services (AS)"].includes(name);
+      // Check per-day shift assignment for AS
       const dateKey = from.format("YYYY-MM-DD");
       const shiftsToday = assignedShiftsPerDay[dateKey]?.[name] || 0;
-      if (isAS && shiftsToday >= 1) return false;
+      if (shiftsToday >= 1) return false;
 
       return true;
     });
@@ -448,7 +445,6 @@ app.get("/autoschedule/compare", async (req, res) => {
 
         const available = getAvailableStaff(from, to, dayNum);
         let name = "—";
-        let isFallback = false;
 
         if (strategy === "rotation" && available.length > 0) {
           name = available[rotationState.index % available.length];
@@ -467,12 +463,10 @@ app.get("/autoschedule/compare", async (req, res) => {
         }
 
         if (name !== "—") {
-          const isAS = groupMap["Adult Services (AS)"].includes(name);
-          isFallback = !isAS;
           assignedShiftsPerDay[dateStr][name] = (assignedShiftsPerDay[dateStr][name] || 0) + 1;
         }
 
-        dayData.push({ block: blockLabel, assigned: name, isFallback });
+        dayData.push({ block: blockLabel, assigned: name });
       }
 
       result.push({ date: dateStr, blocks: dayData });
@@ -494,6 +488,7 @@ app.get("/autoschedule/compare", async (req, res) => {
     dayjs
   });
 });
+
 
 
 function formatTime(hour) {
