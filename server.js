@@ -290,8 +290,8 @@ function shuffle(array) {
   return array;
 }
 
-const shuffled = shuffle(bestGroup);
-const topStaff = shuffled.slice(0, 2).map(s => s.name); // pick 2 at random
+const topStaff = bestGroup.map(s => s.name); // all available, sorted by shift count if needed
+
 
 
       scheduleSuggestions.push({
