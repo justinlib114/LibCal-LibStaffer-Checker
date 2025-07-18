@@ -368,7 +368,7 @@ scheduleSuggestions.push({
 app.get("/autoschedule/generate", (req, res) => {
   const start = dayjs().format("YYYY-MM-DD");
   const end = dayjs().add(13, "day").format("YYYY-MM-DD");
-  res.render("generate-form", { start, end });
+  res.render("generate-form", { start, end, dayjs });
 });
 
 app.get("/autoschedule/compare", async (req, res) => {
@@ -480,7 +480,8 @@ app.get("/autoschedule/compare", async (req, res) => {
   res.render("compare", {
     suggestions: result,
     startDate: startParam,
-    endDate: endParam
+    endDate: endParam,
+    dayjs
   });
 });
 
