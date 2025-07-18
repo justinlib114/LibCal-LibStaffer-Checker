@@ -264,6 +264,7 @@ res.render("autoschedule", {
   endDate: endParam,
   dayjs // <- pass dayjs to the view
 });
+  });
 
 
 
