@@ -167,7 +167,6 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/autoschedule", async (req, res) => {
-  const dayjs = require("dayjs");
   const startParam = req.query.start || dayjs().format("YYYY-MM-DD");
   const endParam = req.query.end || dayjs().add(13, "day").format("YYYY-MM-DD");
   const startDate = dayjs(startParam).startOf("day");
@@ -185,9 +184,45 @@ app.get("/autoschedule", async (req, res) => {
     "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
   };
 
+  const weekdayBlocks = {
+    1: [ // Monday
+      { label: "9–11", from: 9, to: 11 },
+      { label: "11–1", from: 11, to: 13 },
+      { label: "1–3", from: 13, to: 15 },
+      { label: "3–5", from: 15, to: 17 }
+    ],
+    2: [ // Tuesday
+      { label: "9–11", from: 9, to: 11 },
+      { label: "11–1", from: 11, to: 13 },
+      { label: "1–3", from: 13, to: 15 },
+      { label: "3–5", from: 15, to: 17 },
+      { label: "5–7", from: 17, to: 19 },
+      { label: "7–8:30", from: 19, to: 20.5 }
+    ],
+    3: [ // Wednesday
+      { label: "9–11", from: 9, to: 11 },
+      { label: "11–1", from: 11, to: 13 },
+      { label: "1–3", from: 13, to: 15 },
+      { label: "3–5", from: 15, to: 17 },
+      { label: "5–7", from: 17, to: 19 },
+      { label: "7–8:30", from: 19, to: 20.5 }
+    ],
+    4: [ // Thursday
+      { label: "9–11", from: 9, to: 11 },
+      { label: "11–1", from: 11, to: 13 },
+      { label: "1–3", from: 13, to: 15 },
+      { label: "3–5", from: 15, to: 17 }
+    ],
+    5: [ // Friday
+      { label: "9–11", from: 9, to: 11 },
+      { label: "11–1", from: 11, to: 13 },
+      { label: "1–3", from: 13, to: 15 },
+      { label: "3–5", from: 15, to: 17 }
+    ]
+  };
+
   const staffConflicts = {};
 
-  // Load conflict data (reuses same logic as main route)
   for (const userId of libstafferUsers) {
     const name = userIdToName[userId];
     staffConflicts[name] = [];
@@ -195,11 +230,7 @@ app.get("/autoschedule", async (req, res) => {
     for (const scheduleId of scheduleIds) {
       const { data } = await axios.get(`${LIBSTAFFER_BASE}/users/shifts/${userId}`, {
         headers: { Authorization: `Bearer ${libstafferToken}` },
-        params: {
-          date: startDate.format("YYYY-MM-DD"),
-          days: 90,
-          scheduleId
-        }
+        params: { date: startDate.format("YYYY-MM-DD"), days: 90, scheduleId }
       });
 
       for (const shift of data?.data?.shifts || []) {
@@ -211,10 +242,7 @@ app.get("/autoschedule", async (req, res) => {
 
     const timeoffs = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
       headers: { Authorization: `Bearer ${libstafferToken}` },
-      params: {
-        date: startDate.format("YYYY-MM-DD"),
-        days: 90
-      }
+      params: { date: startDate.format("YYYY-MM-DD"), days: 90 }
     });
 
     for (const t of timeoffs?.data?.data?.timeOff || []) {
@@ -227,44 +255,51 @@ app.get("/autoschedule", async (req, res) => {
   const scheduleSuggestions = [];
 
   for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
-    const availableByGroup = {
-      AS: [],
-      PT: [],
-      AD: []
-    };
+    const dow = d.day();
+    if (!weekdayBlocks[dow]) continue;
 
-    for (const [group, members] of Object.entries(groupMap)) {
-      for (const name of members) {
-        const hasConflict = staffConflicts[name]?.some(c => isOverlapping(
-          d.hour(9), d.hour(21),
-          c.from, c.to
-        ));
+    for (const block of weekdayBlocks[dow]) {
+      const fromTime = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
+      const toTime = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
 
-        if (!hasConflict) {
-          const shiftCount = staffConflicts[name]?.length || 0;
-          const staffType = group.includes("Adult") ? "AS" : group.includes("Part") ? "PT" : "AD";
-          availableByGroup[staffType].push({ name, shiftCount });
+      const availableByGroup = { AS: [], PT: [], AD: [] };
+
+      for (const [group, members] of Object.entries(groupMap)) {
+        for (const name of members) {
+          const hasConflict = staffConflicts[name]?.some(c => isOverlapping(fromTime, toTime, c.from, c.to));
+          if (!hasConflict) {
+            const shiftCount = staffConflicts[name]?.length || 0;
+            const staffType = group.includes("Adult") ? "AS" : group.includes("Part") ? "PT" : "AD";
+            availableByGroup[staffType].push({ name, shiftCount });
+          }
         }
       }
+
+      const bestGroup = availableByGroup.AS.length
+        ? availableByGroup.AS
+        : availableByGroup.PT.length
+          ? availableByGroup.PT
+          : availableByGroup.AD;
+
+      const sorted = bestGroup.sort((a, b) => a.shiftCount - b.shiftCount);
+      const topStaff = sorted.slice(0, 2).map(s => s.name); // top 2
+
+      scheduleSuggestions.push({
+        date: d.format("YYYY-MM-DD"),
+        block: block.label,
+        suggestions: topStaff.length ? topStaff.join(", ") : "No one available"
+      });
     }
-
-    const bestGroup = availableByGroup.AS.length
-      ? availableByGroup.AS
-      : availableByGroup.PT.length
-        ? availableByGroup.PT
-        : availableByGroup.AD;
-
-    const sorted = bestGroup.sort((a, b) => a.shiftCount - b.shiftCount);
-    scheduleSuggestions.push({ date: d.format("YYYY-MM-DD"), suggestion: sorted[0]?.name || "No one available" });
   }
 
-res.render("autoschedule", {
-  scheduleSuggestions,
-  startDate: startParam,
-  endDate: endParam,
-  dayjs // <- pass dayjs to the view
-});
+  res.render("autoschedule", {
+    scheduleSuggestions,
+    startDate: startParam,
+    endDate: endParam,
+    dayjs
   });
+});
+
 
 
 
