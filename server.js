@@ -73,7 +73,7 @@ app.get("/", async (req, res) => {
     for (let sid of scheduleIds) {
       const { data } = await axios.get(`${LIBSTAFFER_BASE}/users/shifts/${userId}`, {
         headers: { Authorization: `Bearer ${libstafferToken}` },
-        params: { date: from, days: 28, scheduleId: sid }
+        params: { date: from, days: 60, scheduleId: sid }
       });
 
       const shifts = data?.data?.shifts || [];
@@ -89,7 +89,7 @@ app.get("/", async (req, res) => {
 
     const timeoffRes = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
       headers: { Authorization: `Bearer ${libstafferToken}` },
-      params: { date: from, days: 28 }
+      params: { date: from, days: 60 }
     });
     for (let t of timeoffRes?.data?.data?.timeOff || []) {
       const s = dayjs(t.from);
@@ -106,7 +106,7 @@ app.get("/", async (req, res) => {
     const params = new URLSearchParams();
     params.append("cal_id", calId);
     params.append("date", from);
-    params.append("days", "28");
+    params.append("days", "60");
     params.append("limit", "500");
 
     const libcalEvents = await axios.get(`${LIBCAL_BASE}/events?${params.toString()}`, {
@@ -136,7 +136,7 @@ app.get("/", async (req, res) => {
     params: {
       user_id: libcalAppointmentUserId,
       date: from,
-      days: 28,
+      days: 60,
       limit: 500
     }
   });
