@@ -321,6 +321,9 @@ scheduleSuggestions.push({
     ? allSuggestions
     : [{ group: "None", people: [{ label: "No one available", alreadyAssigned: false }] }]
 });
+    }
+  } // FIXED — closes both for-loops over weekday blocks and days
+
 
 
   res.render("autoschedule", {
