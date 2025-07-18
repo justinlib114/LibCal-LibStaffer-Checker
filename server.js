@@ -308,12 +308,12 @@ if (priorShift) {
   )}`;
 }
 
-groupSuggestions.push({
-  name,
-  label: `${name} (${dayCount})${timeNote}`,
-  alreadyAssigned: hasAnySameDayShift
-});
-
+          groupSuggestions.push({
+            name,
+            label: `${name} (${dayCount})${timeNote}`,
+            alreadyAssigned: hasAnySameDayShift
+          });
+        } // ← this closes the for (const name of names) loop
 
         groupSuggestions.sort((a, b) => {
           const weekA = shiftCounts[a.name]?.[d.startOf("week").format("YYYY-MM-DD")] || 0;
@@ -327,7 +327,8 @@ groupSuggestions.push({
             people: groupSuggestions
           });
         }
-      }
+      } // closes the for (const [group, names]) loop
+
 
 const adultServices = groupMap["Adult Services (AS)"];
 const scheduledNames = Object.entries(staffConflicts)
