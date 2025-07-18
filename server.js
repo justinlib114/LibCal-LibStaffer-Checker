@@ -410,21 +410,25 @@ app.get("/autoschedule/compare", async (req, res) => {
     return false;
   }
 
-  function getAvailableStaff(from, to, dayNum) {
-    return allStaff.filter(name => {
-      if (isUnavailable(name, dayNum, from.hour() + from.minute() / 60)) return false;
+function getAvailableStaff(from, to, dayNum) {
+  return groupMap["Adult Services (AS)"].filter(name => {
+    // Hardcoded time rules (e.g., not working Tuesday after 5pm, etc.)
+    if (isUnavailable(name, dayNum, from.hour() + from.minute() / 60)) return false;
 
-      const conflicts = staffConflicts[name] || [];
-      if (conflicts.some(c => isOverlapping(from, to, c.from, c.to))) return false;
+    const conflicts = staffConflicts[name] || [];
 
-      // Check per-day shift assignment for AS
-      const dateKey = from.format("YYYY-MM-DD");
-      const shiftsToday = assignedShiftsPerDay[dateKey]?.[name] || 0;
-      if (shiftsToday >= 1) return false;
+    // This now checks actual conflict overlap using isOverlapping
+    if (conflicts.some(c => isOverlapping(from, to, c.from, c.to))) return false;
 
-      return true;
-    });
-  }
+    // Only allow 1 shift/day for AS staff
+    const dateKey = from.format("YYYY-MM-DD");
+    const shiftsToday = assignedShiftsPerDay[dateKey]?.[name] || 0;
+    if (shiftsToday >= 1) return false;
+
+    return true;
+  });
+}
+
 
   function assign(strategy, rotationState) {
     const result = [];
