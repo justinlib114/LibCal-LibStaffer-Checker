@@ -13,6 +13,8 @@
     .ad { background: #f3e5f5; }
     .none { background: #eeeeee; }
     .bold-red { color: red; font-weight: bold; }
+    details summary { cursor: pointer; }
+    ul { padding-left: 20px; text-align: left; }
   </style>
 </head>
 <body>
@@ -31,42 +33,62 @@
   </form>
 
   <table>
-   <table>
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Time Block</th>
-      <th>Scheduled</th>
-      <th>Suggested Staff</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% scheduleSuggestions.forEach(s => { %>
+    <thead>
       <tr>
-        <td><%= s.date %></td>
-        <td><%= s.block %></td>
-        <td>
-          <% if (s.scheduled && s.scheduled.length > 0) { %>
-            <% s.scheduled.forEach(p => { %>
-              <div><%= p %></div>
-            <% }) %>
-          <% } else { %>
-            <div><em>None</em></div>
-          <% } %>
-        </td>
-        <td>
-          <% s.suggestions.forEach(group => { %>
-            <strong><%= group.group %></strong><br>
-            <% group.people.forEach(p => { %>
-              <span style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>"><%= p.label %></span><br>
-            <% }) %>
-            <br>
-          <% }) %>
-        </td>
+        <th>Date</th>
+        <th>Time Block</th>
+        <th>Scheduled</th>
+        <th>Suggested Staff</th>
       </tr>
-    <% }) %>
-  </tbody>
-</table>
-
+    </thead>
+    <tbody>
+      <% scheduleSuggestions.forEach(s => { %>
+        <tr>
+          <td><%= s.date %></td>
+          <td><%= s.block %></td>
+          <td>
+            <% if (s.scheduled && s.scheduled.length > 0) { %>
+              <% s.scheduled.forEach(p => { %>
+                <div><%= p %></div>
+              <% }) %>
+            <% } else { %>
+              <div><em>None</em></div>
+            <% } %>
+          </td>
+          <td>
+            <% s.suggestions.forEach(group => { %>
+              <strong><%= group.group %></strong><br>
+              <% group.people.forEach(p => { 
+                const personConflicts = staffConflicts[p.name] || [];
+                const personConflictsToday = personConflicts.filter(c =>
+                  dayjs(c.from).isSame(dayjs(s.date), "day")
+                );
+              %>
+                <details>
+                  <summary style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>">
+                    <%= p.label %>
+                  </summary>
+                  <% if (personConflictsToday.length === 0) { %>
+                    <em>No conflicts</em>
+                  <% } else { %>
+                    <ul>
+                      <% personConflictsToday.forEach(c => { %>
+                        <li>
+                          <%= c.type %>: 
+                          <%= dayjs(c.from).format("h:mma") %>–<%= dayjs(c.to).format("h:mma") %>
+                          <% if (c.title) { %> – <%= c.title %><% } %>
+                        </li>
+                      <% }) %>
+                    </ul>
+                  <% } %>
+                </details>
+              <% }) %>
+              <br>
+            <% }) %>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
 </body>
 </html>
