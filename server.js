@@ -290,7 +290,7 @@ function shuffle(array) {
   return array;
 }
 
-const topStaff = bestGroup.map(s => s.name); // all available, sorted by shift count if needed
+const topStaff = shuffle(bestGroup).map(s => s.name); // all available, randomized order
 
 
 
