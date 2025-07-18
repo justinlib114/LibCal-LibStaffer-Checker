@@ -204,8 +204,8 @@ app.get("/autoschedule", async (req, res) => {
     5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
   };
 
-  const MAX_SHIFTS_PER_DAY = 2;
-  const MAX_SHIFTS_PER_WEEK = 5;
+  const MAX_SHIFTS_PER_DAY = 5;
+  const MAX_SHIFTS_PER_WEEK = 10;
 
   const staffConflicts = {};
   const shiftCounts = {};
