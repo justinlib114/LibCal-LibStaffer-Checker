@@ -360,7 +360,7 @@ scheduleSuggestions.push({
     scheduleSuggestions,
     startDate: startParam,
     endDate: endParam,
-    dayjs
+    dayjs,
     staffConflicts
   });
 });
