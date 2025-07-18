@@ -166,5 +166,105 @@ app.get("/", async (req, res) => {
   res.render("index", { conflicts });
 });
 
+app.get("/autoschedule", async (req, res) => {
+  const dayjs = require("dayjs");
+  const startParam = req.query.start || dayjs().format("YYYY-MM-DD");
+  const endParam = req.query.end || dayjs().add(13, "day").format("YYYY-MM-DD");
+  const startDate = dayjs(startParam).startOf("day");
+  const endDate = dayjs(endParam).endOf("day");
+
+  const [libstafferToken, libcalToken] = await Promise.all([
+    getLibstafferToken(),
+    getLibcalToken()
+  ]);
+
+  const groupMap = {
+    "Adult Services (AS)": ["Amelia Buccarelli", "Emily Dowie", "Antonio Forte", "Nicole Guenkel", "Janet Heneghan", "Gary LaPicola", "Justin Sanchez"],
+    "Youth Services (YS)": ["Michelle Blanyar", "Sarah Northshield", "Marina Payne", "Joanna Rooney", "Claire Tomkin"],
+    "Part Timers (PT)": ["Angela Carstensen", "Gail Fell", "Susan Kramer", "Patricia Perito", "TonieAnne Rigano", "Alex Shoshani"],
+    "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
+  };
+
+  const staffConflicts = {};
+
+  // Load conflict data (reuses same logic as main route)
+  for (const userId of libstafferUsers) {
+    const name = userIdToName[userId];
+    staffConflicts[name] = [];
+
+    for (const scheduleId of scheduleIds) {
+      const { data } = await axios.get(`${LIBSTAFFER_BASE}/users/shifts/${userId}`, {
+        headers: { Authorization: `Bearer ${libstafferToken}` },
+        params: {
+          date: startDate.format("YYYY-MM-DD"),
+          days: 90,
+          scheduleId
+        }
+      });
+
+      for (const shift of data?.data?.shifts || []) {
+        const from = dayjs(shift.from);
+        const to = dayjs(shift.to);
+        staffConflicts[name].push({ from, to });
+      }
+    }
+
+    const timeoffs = await axios.get(`${LIBSTAFFER_BASE}/users/timeoff/${userId}`, {
+      headers: { Authorization: `Bearer ${libstafferToken}` },
+      params: {
+        date: startDate.format("YYYY-MM-DD"),
+        days: 90
+      }
+    });
+
+    for (const t of timeoffs?.data?.data?.timeOff || []) {
+      const from = dayjs(t.from);
+      const to = dayjs(t.to);
+      staffConflicts[name].push({ from, to });
+    }
+  }
+
+  const scheduleSuggestions = [];
+
+  for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
+    const availableByGroup = {
+      AS: [],
+      PT: [],
+      AD: []
+    };
+
+    for (const [group, members] of Object.entries(groupMap)) {
+      for (const name of members) {
+        const hasConflict = staffConflicts[name]?.some(c => isOverlapping(
+          d.hour(9), d.hour(21),
+          c.from, c.to
+        ));
+
+        if (!hasConflict) {
+          const shiftCount = staffConflicts[name]?.length || 0;
+          const staffType = group.includes("Adult") ? "AS" : group.includes("Part") ? "PT" : "AD";
+          availableByGroup[staffType].push({ name, shiftCount });
+        }
+      }
+    }
+
+    const bestGroup = availableByGroup.AS.length
+      ? availableByGroup.AS
+      : availableByGroup.PT.length
+        ? availableByGroup.PT
+        : availableByGroup.AD;
+
+    const sorted = bestGroup.sort((a, b) => a.shiftCount - b.shiftCount);
+    scheduleSuggestions.push({ date: d.format("YYYY-MM-DD"), suggestion: sorted[0]?.name || "No one available" });
+  }
+
+  res.render("autoschedule", {
+    scheduleSuggestions,
+    startDate: startParam,
+    endDate: endParam
+  });
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
