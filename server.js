@@ -254,10 +254,13 @@ app.get("/autoschedule", async (req, res) => {
       const toTime = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
 
       // Check if someone is already scheduled for this block
-      const assignedAlready = Object.entries(staffConflicts).find(([_, events]) =>
-        events.some(e => isOverlapping(fromTime, toTime, e.from, e.to))
-      );
-      if (assignedAlready) continue; // Skip this block if filled
+let skipBlock = false;
+Object.entries(staffConflicts).forEach(([_, events]) => {
+  if (events.some(e => isOverlapping(fromTime, toTime, e.from, e.to))) {
+    skipBlock = true;
+  }
+});
+
 
       const allSuggestions = [];
 
