@@ -384,7 +384,6 @@ app.get("/autoschedule/compare", async (req, res) => {
   };
 
   const staffList = [...groupMap["Adult Services (AS)"], ...groupMap["Part Timers (PT)"], ...groupMap["Administration (AD)"]];
-
   const shiftMap = {
     1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
     2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
@@ -393,7 +392,7 @@ app.get("/autoschedule/compare", async (req, res) => {
     5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
   };
 
-  // Collect staff conflicts from the previous /autoschedule logic
+  // Pull conflicts generated during autoschedule route
   const staffConflicts = req.app.locals.staffConflicts || {};
 
   function getAvailableStaff(from, to) {
@@ -416,11 +415,10 @@ app.get("/autoschedule/compare", async (req, res) => {
       for (let block of dayShifts) {
         const from = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
         const to = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
-        const blockLabel = formatTimeBlock(block.from, block.to);
+        const blockLabel = `${formatTime(from)}–${formatTime(to)}`;
 
         const available = getAvailableStaff(from, to);
 
-        // Prefer Adult Services
         let assignedName = available.find(n => groupMap["Adult Services (AS)"].includes(n));
         let isFallback = false;
 
@@ -429,13 +427,11 @@ app.get("/autoschedule/compare", async (req, res) => {
           isFallback = true;
         }
 
-        // If still no one, mark empty
         if (!assignedName) {
           assignedName = "—";
           isFallback = false;
         }
 
-        // Strategy modifies order (round robin, etc.)
         if (strategy === "rotation" && available.length > 0) {
           assignedName = available[rotationState.index % available.length];
           isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
@@ -446,7 +442,7 @@ app.get("/autoschedule/compare", async (req, res) => {
         } else if (strategy === "roundrobin" && available.length > 0) {
           assignedName = rotationState.queue.shift();
           if (!available.includes(assignedName)) {
-            assignedName = available[0]; // fallback
+            assignedName = available[0];
           }
           isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
           rotationState.queue.push(assignedName);
@@ -485,11 +481,13 @@ app.get("/autoschedule/compare", async (req, res) => {
   });
 });
 
-
-
-
-
-
+function formatTime(hour) {
+  const h = hour.hour();
+  const m = hour.minute();
+  const suffix = h >= 12 ? "pm" : "am";
+  const hr = ((h + 11) % 12 + 1);
+  return `${hr}${m === 0 ? "" : ":30"}${suffix}`;
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
