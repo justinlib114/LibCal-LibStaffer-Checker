@@ -29,24 +29,28 @@
   </form>
 
   <table>
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>Suggested Staff</th>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Block</th>
+      <th>Suggested Staff</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% scheduleSuggestions.forEach(s => {
+      const group = s.suggestions.includes("No one") ? "" :
+        s.suggestions.match(/Amelia|Antonio|Nicole|Gary|Emily|Justin/) ? "as" :
+        s.suggestions.match(/Angela|Gail|Tonie|Susan|Patricia|Alex/) ? "pt" :
+        s.suggestions.match(/Christa|Christina/) ? "ad" : "";
+    %>
+      <tr class="<%= group %>">
+        <td><%= s.date %></td>
+        <td><%= s.block %></td>
+        <td><%= s.suggestions %></td>
       </tr>
-    </thead>
-    <tbody>
-      <% scheduleSuggestions.forEach(s => {
-        const group = s.suggestion.includes("No one") ? "" : 
-          s.suggestion.includes("Amelia") || s.suggestion.includes("Antonio") || s.suggestion.includes("Nicole") || s.suggestion.includes("Gary") ? "as" :
-          s.suggestion.includes("Angela") || s.suggestion.includes("Gail") || s.suggestion.includes("Tonie") ? "pt" : "ad";
-      %>
-        <tr class="<%= group %>">
-          <td><%= s.date %></td>
-          <td><%= s.suggestion %></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
+    <% }); %>
+  </tbody>
+</table>
+
 </body>
 </html>
