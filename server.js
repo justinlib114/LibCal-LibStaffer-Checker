@@ -185,7 +185,7 @@ app.get("/autoschedule", async (req, res) => {
   const startDate = dayjs(startParam).startOf("day");
   const endDate = dayjs(endParam).endOf("day");
 
-  const [libstafferToken, libcalToken] = await Promise.all([
+  const [libstafferToken] = await Promise.all([
     getLibstafferToken(),
     getLibcalToken()
   ]);
@@ -198,43 +198,15 @@ app.get("/autoschedule", async (req, res) => {
   };
 
   const weekdayBlocks = {
-    1: [ // Monday
-      { label: "9–11", from: 9, to: 11 },
-      { label: "11–1", from: 11, to: 13 },
-      { label: "1–3", from: 13, to: 15 },
-      { label: "3–5", from: 15, to: 17 }
-    ],
-    2: [ // Tuesday
-      { label: "9–11", from: 9, to: 11 },
-      { label: "11–1", from: 11, to: 13 },
-      { label: "1–3", from: 13, to: 15 },
-      { label: "3–5", from: 15, to: 17 },
-      { label: "5–7", from: 17, to: 19 },
-      { label: "7–8:30", from: 19, to: 20.5 }
-    ],
-    3: [ // Wednesday
-      { label: "9–11", from: 9, to: 11 },
-      { label: "11–1", from: 11, to: 13 },
-      { label: "1–3", from: 13, to: 15 },
-      { label: "3–5", from: 15, to: 17 },
-      { label: "5–7", from: 17, to: 19 },
-      { label: "7–8:30", from: 19, to: 20.5 }
-    ],
-    4: [ // Thursday
-      { label: "9–11", from: 9, to: 11 },
-      { label: "11–1", from: 11, to: 13 },
-      { label: "1–3", from: 13, to: 15 },
-      { label: "3–5", from: 15, to: 17 }
-    ],
-    5: [ // Friday
-      { label: "9–11", from: 9, to: 11 },
-      { label: "11–1", from: 11, to: 13 },
-      { label: "1–3", from: 13, to: 15 },
-      { label: "3–5", from: 15, to: 17 }
-    ]
+    1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+    2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+    3: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
+    4: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
+    5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
   };
 
   const staffConflicts = {};
+  const dailyDeskAssignments = {};
 
   for (const userId of libstafferUsers) {
     const name = userIdToName[userId];
@@ -269,48 +241,40 @@ app.get("/autoschedule", async (req, res) => {
 
   for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
     const dow = d.day();
+    const dateKey = d.format("YYYY-MM-DD");
     if (!weekdayBlocks[dow]) continue;
+    if (!dailyDeskAssignments[dateKey]) dailyDeskAssignments[dateKey] = new Set();
 
     for (const block of weekdayBlocks[dow]) {
       const fromTime = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
       const toTime = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
 
-      const availableByGroup = { AS: [], PT: [], AD: [] };
+      const available = [];
 
       for (const [group, members] of Object.entries(groupMap)) {
         for (const name of members) {
-          const hasConflict = staffConflicts[name]?.some(c => isOverlapping(fromTime, toTime, c.from, c.to));
+          const conflicts = staffConflicts[name] || [];
+
+          const hasConflict = conflicts.some(c => isOverlapping(fromTime, toTime, c.from, c.to));
           if (!hasConflict) {
-            const shiftCount = staffConflicts[name]?.length || 0;
-            const staffType = group.includes("Adult") ? "AS" : group.includes("Part") ? "PT" : "AD";
-            availableByGroup[staffType].push({ name, shiftCount });
+            const conflictCount = conflicts.filter(c => c.from.isSame(d, 'day')).length;
+            const alreadyDesk = [...dailyDeskAssignments[dateKey]].includes(name);
+            available.push({
+              name,
+              label: `${name} (${conflictCount})`,
+              alreadyAssigned: alreadyDesk
+            });
           }
         }
       }
 
-      const bestGroup = availableByGroup.AS.length
-        ? availableByGroup.AS
-        : availableByGroup.PT.length
-          ? availableByGroup.PT
-          : availableByGroup.AD;
-
-// Shuffle function
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-const topStaff = shuffle(bestGroup).map(s => s.name); // all available, randomized order
-
-
+      // Record all names assigned to this block (assume they're all options)
+      available.forEach(p => dailyDeskAssignments[dateKey].add(p.name));
 
       scheduleSuggestions.push({
         date: d.format("dddd, MMMM D, YYYY"),
         block: formatTimeBlock(block.from, block.to),
-        suggestions: topStaff.length ? topStaff.join(", ") : "No one available"
+        suggestions: available.length ? available : [{ label: "No one available", alreadyAssigned: false }]
       });
     }
   }
@@ -322,9 +286,6 @@ const topStaff = shuffle(bestGroup).map(s => s.name); // all available, randomiz
     dayjs
   });
 });
-
-
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Desk Conflict Checker running on port ${PORT}`));
