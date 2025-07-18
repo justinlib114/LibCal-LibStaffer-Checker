@@ -383,7 +383,7 @@ app.get("/autoschedule/compare", async (req, res) => {
     "Administration (AD)": ["Christa O'Sullivan", "Christina Ryan-Linder"]
   };
 
-  const staffList = [...groupMap["Adult Services (AS)"], ...groupMap["Part Timers (PT)"], ...groupMap["Administration (AD)"]];
+  const allStaff = [...groupMap["Adult Services (AS)"], ...groupMap["Part Timers (PT)"], ...groupMap["Administration (AD)"]];
   const shiftMap = {
     1: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }],
     2: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }, { from: 17, to: 19 }, { from: 19, to: 20.5 }],
@@ -392,85 +392,99 @@ app.get("/autoschedule/compare", async (req, res) => {
     5: [{ from: 9, to: 11 }, { from: 11, to: 13 }, { from: 13, to: 15 }, { from: 15, to: 17 }]
   };
 
-  // Pull conflicts generated during autoschedule route
   const staffConflicts = req.app.locals.staffConflicts || {};
+  const assignedShiftsPerDay = {};
 
-  function getAvailableStaff(from, to) {
-    return staffList.filter(name => {
-      const events = staffConflicts[name] || [];
-      return !events.some(ev => isOverlapping(from, to, ev.from, ev.to));
+  function isUnavailable(name, dayNum, hour) {
+    const after5pm = hour >= 17;
+    const before12_30 = hour < 12.5;
+
+    if (dayNum === 2) { // Tuesday
+      if (after5pm && ["Justin Sanchez", "Gary LaPicola", "Amelia Buccarelli"].includes(name)) return true;
+      if (before12_30 && ["Nicole Guenkel", "Janet Heneghan", "Emily Dowie", "Antonio Forte"].includes(name)) return true;
+    }
+
+    if (dayNum === 3) { // Wednesday
+      if (after5pm && ["Nicole Guenkel", "Janet Heneghan", "Emily Dowie", "Antonio Forte"].includes(name)) return true;
+      if (before12_30 && ["Justin Sanchez", "Gary LaPicola", "Amelia Buccarelli"].includes(name)) return true;
+    }
+
+    return false;
+  }
+
+  function getAvailableStaff(from, to, dayNum) {
+    return allStaff.filter(name => {
+      if (isUnavailable(name, dayNum, from.hour() + from.minute() / 60)) return false;
+
+      const conflicts = staffConflicts[name] || [];
+      if (conflicts.some(c => isOverlapping(from, to, c.from, c.to))) return false;
+
+      // Check per-day shift assignment for Adult Services
+      const isAS = groupMap["Adult Services (AS)"].includes(name);
+      const dateKey = from.format("YYYY-MM-DD");
+      const shiftsToday = assignedShiftsPerDay[dateKey]?.[name] || 0;
+      if (isAS && shiftsToday >= 1) return false;
+
+      return true;
     });
   }
 
-  function assignStaff(strategy, rotationState) {
-    const assigned = [];
+  function assign(strategy, rotationState) {
+    const result = [];
 
     for (let d = startDate; d.isBefore(endDate); d = d.add(1, "day")) {
-      const dayShifts = shiftMap[d.day()];
-      if (!dayShifts) continue;
+      const dayNum = d.day();
+      const blocks = shiftMap[dayNum];
+      if (!blocks) continue;
 
       const dateStr = d.format("YYYY-MM-DD");
-      const dayAssignments = [];
+      if (!assignedShiftsPerDay[dateStr]) assignedShiftsPerDay[dateStr] = {};
+      const dayData = [];
 
-      for (let block of dayShifts) {
+      for (const block of blocks) {
         const from = d.hour(Math.floor(block.from)).minute((block.from % 1) * 60);
         const to = d.hour(Math.floor(block.to)).minute((block.to % 1) * 60);
         const blockLabel = `${formatTime(from)}–${formatTime(to)}`;
 
-        const available = getAvailableStaff(from, to);
-
-        let assignedName = available.find(n => groupMap["Adult Services (AS)"].includes(n));
+        const available = getAvailableStaff(from, to, dayNum);
+        let name = "—";
         let isFallback = false;
 
-        if (!assignedName) {
-          assignedName = available.find(n => groupMap["Part Timers (PT)"].includes(n) || groupMap["Administration (AD)"].includes(n));
-          isFallback = true;
-        }
-
-        if (!assignedName) {
-          assignedName = "—";
-          isFallback = false;
-        }
-
         if (strategy === "rotation" && available.length > 0) {
-          assignedName = available[rotationState.index % available.length];
-          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
+          name = available[rotationState.index % available.length];
           rotationState.index++;
         } else if (strategy === "random" && available.length > 0) {
-          assignedName = available[Math.floor(Math.random() * available.length)];
-          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
+          name = available[Math.floor(Math.random() * available.length)];
         } else if (strategy === "roundrobin" && available.length > 0) {
-          assignedName = rotationState.queue.shift();
-          if (!available.includes(assignedName)) {
-            assignedName = available[0];
+          while (rotationState.queue.length) {
+            const candidate = rotationState.queue.shift();
+            if (available.includes(candidate)) {
+              name = candidate;
+              rotationState.queue.push(candidate);
+              break;
+            }
           }
-          isFallback = !groupMap["Adult Services (AS)"].includes(assignedName);
-          rotationState.queue.push(assignedName);
         }
 
-        dayAssignments.push({
-          block: blockLabel,
-          assigned: assignedName,
-          isFallback
-        });
+        if (name !== "—") {
+          const isAS = groupMap["Adult Services (AS)"].includes(name);
+          isFallback = !isAS;
+          assignedShiftsPerDay[dateStr][name] = (assignedShiftsPerDay[dateStr][name] || 0) + 1;
+        }
+
+        dayData.push({ block: blockLabel, assigned: name, isFallback });
       }
 
-      assigned.push({
-        date: dateStr,
-        blocks: dayAssignments
-      });
+      result.push({ date: dateStr, blocks: dayData });
     }
 
-    return assigned;
+    return result;
   }
 
-  const rotationState = { index: 0 };
-  const roundRobinState = { queue: [...staffList] };
-
   const result = {
-    rotation: assignStaff("rotation", rotationState),
-    random: assignStaff("random", {}),
-    roundrobin: assignStaff("roundrobin", roundRobinState)
+    rotation: assign("rotation", { index: 0 }),
+    random: assign("random", {}),
+    roundrobin: assign("roundrobin", { queue: [...allStaff] })
   };
 
   res.render("compare", {
@@ -480,6 +494,7 @@ app.get("/autoschedule/compare", async (req, res) => {
     dayjs
   });
 });
+
 
 function formatTime(hour) {
   const h = hour.hour();
