@@ -6,73 +6,69 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f9f9f9;
+      background: #f4f4f4;
       padding: 20px;
     }
-    h1 {
+
+    h1, h2 {
       text-align: center;
     }
-    h2 {
-      margin-top: 30px;
+
+    p {
       text-align: center;
-      border-bottom: 2px solid #ccc;
-      padding-bottom: 5px;
     }
+
     .container {
       display: flex;
-      gap: 20px;
-      justify-content: space-around;
       flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 30px;
     }
+
     .schedule-table {
       background: #fff;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 20px;
       width: 100%;
       max-width: 600px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+
     .day-block {
-      margin-bottom: 25px;
+      margin-bottom: 30px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
     }
-    .day-block h3 {
-      background: #eee;
-      padding: 8px;
-      margin: 0;
-      font-size: 1.1em;
-      border-radius: 4px 4px 0 0;
-    }
+
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 10px;
     }
+
     th, td {
       border: 1px solid #ccc;
       padding: 8px;
       text-align: center;
     }
-    .fallback {
-      color: red;
-      font-weight: bold;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
+
+    .unfilled {
+      color: #999;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>Compare Auto Schedule Permutations</h1>
-    <p>From <strong><%= startDate %></strong> to <strong><%= endDate %></strong></p>
-  </div>
+  <h1>Compare Auto Schedule Permutations</h1>
+  <p>From <strong><%= startDate %></strong> to <strong><%= endDate %></strong></p>
 
   <div class="container">
     <% Object.entries(suggestions).forEach(([mode, days]) => { %>
       <div class="schedule-table">
-        <h2><%= mode.charAt(0).toUpperCase() + mode.slice(1) %></h2>
+        <h2><%= mode.charAt(0).toUpperCase() + mode.slice(1) %> Mode</h2>
 
         <% days.forEach(day => { %>
           <div class="day-block">
@@ -88,8 +84,8 @@
                 <% day.blocks.forEach(b => { %>
                   <tr>
                     <td><%= b.block %></td>
-                    <td class="<%= b.isFallback ? 'fallback' : '' %>">
-                      <%= b.isFallback ? "⚠️ " : "" %><%= b.assigned %>
+                    <td class="<%= b.assigned === '—' ? 'unfilled' : '' %>">
+                      <%= b.assigned === '—' ? 'Unfilled' : b.assigned %>
                     </td>
                   </tr>
                 <% }) %>
