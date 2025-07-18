@@ -307,11 +307,18 @@ Object.entries(staffConflicts).forEach(([_, events]) => {
         }
       }
 
-      const scheduledNames = Object.entries(staffConflicts)
-  .filter(([_, events]) =>
-    events.some(e => e.type === "Shift" && isOverlapping(fromTime, toTime, e.from, e.to))
+const adultServices = groupMap["Adult Services (AS)"];
+const scheduledNames = Object.entries(staffConflicts)
+  .filter(([name, events]) =>
+    adultServices.includes(name) &&
+    events.some(e =>
+      e.type === "Shift" &&
+      !e.type.toLowerCase().includes("off") &&
+      isOverlapping(fromTime, toTime, e.from, e.to)
+    )
   )
-  .map(([name, _]) => name);
+  .map(([name]) => name);
+
 
 scheduleSuggestions.push({
   date: d.format("dddd, MMMM D, YYYY"),
