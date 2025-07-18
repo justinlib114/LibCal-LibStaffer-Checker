@@ -361,6 +361,7 @@ scheduleSuggestions.push({
     startDate: startParam,
     endDate: endParam,
     dayjs
+    staffConflicts
   });
 });
 
