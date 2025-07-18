@@ -7,10 +7,12 @@
     body { font-family: Arial, sans-serif; padding: 20px; background: #f8f8f8; }
     h1 { text-align: center; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; }
-    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; vertical-align: top; }
     .as { background: #e0f7fa; }
     .pt { background: #fff3e0; }
     .ad { background: #f3e5f5; }
+    .none { background: #eeeeee; }
+    .bold-red { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -29,35 +31,37 @@
   </form>
 
   <table>
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Block</th>
-      <th>Suggested Staff</th>
-    </tr>
-  </thead>
-  <tbody>
-   <% scheduleSuggestions.forEach(s => {
-  const names = s.suggestions.map(p => p.name || "").join(" ");
-  const group = names.includes("No one") ? "" :
-    /Amelia|Antonio|Nicole|Gary|Emily|Justin/.test(names) ? "as" :
-    /Angela|Gail|Tonie|Susan|Patricia|Alex/.test(names) ? "pt" :
-    /Christa|Christina/.test(names) ? "ad" : "";
-%>
-
-      <tr class="<%= group %>">
-        <td><%= s.date %></td>
-        <td><%= s.block %></td>
-<td>
-  <% s.suggestions.forEach(p => { %>
-    <span style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>"><%= p.label %></span><br>
-  <% }) %>
-</td>
-
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Time Block</th>
+        <th>Suggested Staff</th>
       </tr>
-    <% }); %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% scheduleSuggestions.forEach(s => { 
+          let groupClass = "none";
+          const suggestionsFlat = s.suggestions.flatMap(g => g.people.map(p => p.name || p.label));
+          if (suggestionsFlat.some(n => /Amelia|Antonio|Nicole|Gary|Emily|Justin/.test(n))) groupClass = "as";
+          else if (suggestionsFlat.some(n => /Angela|Gail|Tonie|Susan|Patricia|Alex/.test(n))) groupClass = "pt";
+          else if (suggestionsFlat.some(n => /Christa|Christina/.test(n))) groupClass = "ad";
+      %>
+        <tr class="<%= groupClass %>">
+          <td><%= s.date %></td>
+          <td><%= s.block %></td>
+          <td>
+            <% s.suggestions.forEach(group => { %>
+              <div><strong><%= group.group %>:</strong></div>
+              <% group.people.forEach(p => { %>
+                <span class="<%= p.alreadyAssigned ? 'bold-red' : '' %>"><%= p.label %></span><br>
+              <% }) %>
+              <br>
+            <% }) %>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
 
 </body>
 </html>
