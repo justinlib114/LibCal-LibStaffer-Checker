@@ -38,29 +38,24 @@
         <th>Suggested Staff</th>
       </tr>
     </thead>
-    <tbody>
-      <% scheduleSuggestions.forEach(s => { 
-          let groupClass = "none";
-          const suggestionsFlat = s.suggestions.flatMap(g => g.people.map(p => p.name || p.label));
-          if (suggestionsFlat.some(n => /Amelia|Antonio|Nicole|Gary|Emily|Justin/.test(n))) groupClass = "as";
-          else if (suggestionsFlat.some(n => /Angela|Gail|Tonie|Susan|Patricia|Alex/.test(n))) groupClass = "pt";
-          else if (suggestionsFlat.some(n => /Christa|Christina/.test(n))) groupClass = "ad";
-      %>
-        <tr class="<%= groupClass %>">
-          <td><%= s.date %></td>
-          <td><%= s.block %></td>
-          <td>
-            <% s.suggestions.forEach(group => { %>
-              <div><strong><%= group.group %>:</strong></div>
-              <% group.people.forEach(p => { %>
-                <span class="<%= p.alreadyAssigned ? 'bold-red' : '' %>"><%= p.label %></span><br>
-              <% }) %>
-              <br>
-            <% }) %>
-          </td>
-        </tr>
-      <% }); %>
-    </tbody>
+   <tbody>
+<% scheduleSuggestions.forEach(s => { %>
+  <tr>
+    <td><%= s.date %></td>
+    <td><%= s.block %></td>
+    <td>
+      <% s.suggestions.forEach(group => { %>
+        <strong><%= group.group %></strong><br>
+        <% group.people.forEach(p => { %>
+          <span style="<%= p.alreadyAssigned ? 'color: red; font-weight: bold;' : '' %>"><%= p.label %></span><br>
+        <% }) %>
+        <br>
+      <% }) %>
+    </td>
+  </tr>
+<% }) %>
+</tbody>
+
   </table>
 
 </body>
